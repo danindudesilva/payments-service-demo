@@ -121,7 +121,7 @@ func (p *PaymentAttempt) MarkSucceeded(now time.Time) error {
 
 func (p *PaymentAttempt) MarkFailed(reason string, now time.Time) error {
 	if strings.TrimSpace(reason) == "" {
-		reason = "unknown"
+		reason = FailureReasonUnknown
 	}
 
 	if err := p.transitionTo(PaymentStatusFailed); err != nil {
