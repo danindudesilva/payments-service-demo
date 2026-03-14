@@ -13,4 +13,3 @@ fmt:
 
 build:
 	go build -o bin/$(APP_NAME) ./cmd/api
-	
