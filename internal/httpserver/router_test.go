@@ -9,9 +9,13 @@ import (
 	"testing"
 
 	"github.com/danindudesilva/payments-service/internal/config"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHealthz(t *testing.T) {
+	t.Parallel()
+
 	router := NewRouter(
 		config.Config{AppEnv: "test"},
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
@@ -22,19 +26,26 @@ func TestHealthz(t *testing.T) {
 
 	router.ServeHTTP(res, req)
 
-	if res.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", res.Code, http.StatusOK)
-	}
+	require.Equal(t, http.StatusOK, res.Code)
+	assert.Contains(t, res.Header().Get("Content-Type"), "application/json")
+	assert.NotEmpty(t, res.Header().Get("X-Request-Id"))
+	assert.Contains(t, res.Body.String(), `"status":"ok"`)
+	assert.Contains(t, res.Body.String(), `"env":"test"`)
+}
 
-	if got := res.Header().Get("Content-Type"); !strings.Contains(got, "application/json") {
-		t.Fatalf("content type = %q, want application/json", got)
-	}
+func TestHealthz_MethodNotAllowed(t *testing.T) {
+	t.Parallel()
 
-	if got := res.Header().Get("X-Request-Id"); got == "" {
-		t.Fatal("expected X-Request-Id header")
-	}
+	router := NewRouter(
+		config.Config{AppEnv: "test"},
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
 
-	if body := res.Body.String(); !strings.Contains(body, `"status":"ok"`) {
-		t.Fatalf("unexpected body: %s", body)
-	}
+	req := httptest.NewRequest(http.MethodPost, "/healthz", nil)
+	res := httptest.NewRecorder()
+
+	router.ServeHTTP(res, req)
+
+	require.Equal(t, http.StatusMethodNotAllowed, res.Code)
+	assert.True(t, strings.Contains(res.Body.String(), "method not allowed"))
 }

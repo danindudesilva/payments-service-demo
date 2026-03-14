@@ -1,11 +1,15 @@
 package config
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestHTTPAddress(t *testing.T) {
+	t.Parallel()
+
 	cfg := Config{HTTPPort: "9999"}
 
-	if got, want := cfg.HTTPAddress(), ":9999"; got != want {
-		t.Fatalf("HTTPAddress() = %q, want %q", got, want)
-	}
+	assert.Equal(t, ":9999", cfg.HTTPAddress())
 }
