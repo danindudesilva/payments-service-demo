@@ -61,13 +61,25 @@ func (p *PaymentAttempt) LinkProvider(providerName, providerPaymentID, clientSec
 		return fmt.Errorf("providerPaymentID must not be empty")
 	}
 
-	p.Provider = ProviderDetails{
+	newDetails := ProviderDetails{
 		ProviderName:      providerName,
 		ProviderPaymentID: providerPaymentID,
 		ClientSecret:      clientSecret,
 	}
-	p.touch(now)
-	return nil
+
+	if p.Provider.ProviderName == "" && p.Provider.ProviderPaymentID == "" {
+		p.Provider = newDetails
+		p.touch(now)
+		return nil
+	}
+
+	if p.Provider.ProviderName == newDetails.ProviderName &&
+		p.Provider.ProviderPaymentID == newDetails.ProviderPaymentID &&
+		p.Provider.ClientSecret == newDetails.ClientSecret {
+		return nil
+	}
+
+	return ErrProviderAlreadyLinked
 }
 
 func (p *PaymentAttempt) MarkRequiresAction(action NextAction, now time.Time) error {

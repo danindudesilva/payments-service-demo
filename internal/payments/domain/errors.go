@@ -8,4 +8,5 @@ var (
 	ErrInvalidMoney      = errors.New("invalid money")
 	ErrInvalidNextAction = errors.New("invalid next action")
 	ErrPaymentNotFound   = errors.New("payment attempt not found")
+	ErrProviderAlreadyLinked  = errors.New("provider payment already linked")
 )
