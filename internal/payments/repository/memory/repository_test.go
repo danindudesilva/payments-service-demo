@@ -15,52 +15,16 @@ func TestRepository_SaveAndGetByID(t *testing.T) {
 
 	repo := NewRepository()
 
-	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
-	attempt, err := domain.NewPaymentAttempt(
-		"pa_123",
-		"order_123",
-		domain.Money{Amount: 2500, Currency: "gbp"},
-		now,
-	)
+	attempt := mustAttempt(t)
+	err := repo.Save(context.Background(), attempt)
 	require.NoError(t, err)
 
-	err = repo.Save(context.Background(), attempt)
+	got, err := repo.GetByID(context.Background(), attempt.ID)
 	require.NoError(t, err)
 
-	got, err := repo.GetByID(context.Background(), "pa_123")
-	require.NoError(t, err)
-
-	assert.Equal(t, "pa_123", got.ID)
-	assert.Equal(t, "GBP", got.Money.Currency)
+	assert.Equal(t, attempt.ID, got.ID)
 	assert.Equal(t, domain.PaymentStatusPending, got.Status)
-}
-
-func TestRepository_GetByProviderPaymentID(t *testing.T) {
-	t.Parallel()
-
-	repo := NewRepository()
-
-	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
-	attempt, err := domain.NewPaymentAttempt(
-		"pa_123",
-		"order_123",
-		domain.Money{Amount: 2500, Currency: "GBP"},
-		now,
-	)
-	require.NoError(t, err)
-
-	err = attempt.LinkProvider("stripe", "pi_123", "secret_123", now.Add(time.Minute))
-	require.NoError(t, err)
-
-	err = repo.Save(context.Background(), attempt)
-	require.NoError(t, err)
-
-	got, err := repo.GetByProviderPaymentID(context.Background(), "pi_123")
-	require.NoError(t, err)
-
-	assert.Equal(t, "pa_123", got.ID)
-	assert.Equal(t, "stripe", got.Provider.ProviderName)
-	assert.Equal(t, "pi_123", got.Provider.ProviderPaymentID)
+	assert.Equal(t, "GBP", got.Money.Currency)
 }
 
 func TestRepository_GetByID_NotFound(t *testing.T) {
@@ -70,6 +34,28 @@ func TestRepository_GetByID_NotFound(t *testing.T) {
 
 	_, err := repo.GetByID(context.Background(), "missing")
 	require.ErrorIs(t, err, domain.ErrPaymentNotFound)
+}
+
+func TestRepository_GetByProviderPaymentID(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+
+	attempt := mustAttempt(t)
+	now := time.Date(2026, 3, 14, 12, 1, 0, 0, time.UTC)
+
+	err := attempt.LinkProvider("stripe", "pi_123", "secret_123", now)
+	require.NoError(t, err)
+
+	err = repo.Save(context.Background(), attempt)
+	require.NoError(t, err)
+
+	got, err := repo.GetByProviderPaymentID(context.Background(), "pi_123")
+	require.NoError(t, err)
+
+	assert.Equal(t, attempt.ID, got.ID)
+	assert.Equal(t, "stripe", got.Provider.ProviderName)
+	assert.Equal(t, "pi_123", got.Provider.ProviderPaymentID)
 }
 
 func TestRepository_GetByProviderPaymentID_NotFound(t *testing.T) {
@@ -86,22 +72,15 @@ func TestRepository_SaveStoresClone(t *testing.T) {
 
 	repo := NewRepository()
 
-	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
-	attempt, err := domain.NewPaymentAttempt(
-		"pa_123",
-		"order_123",
-		domain.Money{Amount: 2500, Currency: "GBP"},
-		now,
-	)
-	require.NoError(t, err)
+	attempt := mustAttempt(t)
 
-	err = repo.Save(context.Background(), attempt)
+	err := repo.Save(context.Background(), attempt)
 	require.NoError(t, err)
 
 	attempt.Status = domain.PaymentStatusFailed
 	attempt.FailureReason = "mutated after save"
 
-	got, err := repo.GetByID(context.Background(), "pa_123")
+	got, err := repo.GetByID(context.Background(), attempt.ID)
 	require.NoError(t, err)
 
 	assert.Equal(t, domain.PaymentStatusPending, got.Status)
@@ -109,6 +88,27 @@ func TestRepository_SaveStoresClone(t *testing.T) {
 }
 
 func TestRepository_GetReturnsClone(t *testing.T) {
+	t.Parallel()
+
+	repo := NewRepository()
+
+	attempt := mustAttempt(t)
+
+	err := repo.Save(context.Background(), attempt)
+	require.NoError(t, err)
+
+	got, err := repo.GetByID(context.Background(), attempt.ID)
+	require.NoError(t, err)
+
+	got.Status = domain.PaymentStatusFailed
+
+	gotAgain, err := repo.GetByID(context.Background(), attempt.ID)
+	require.NoError(t, err)
+
+	assert.Equal(t, domain.PaymentStatusPending, gotAgain.Status)
+}
+
+func TestRepository_SaveAndGetTerminalAttemptPreservesCompletedAt(t *testing.T) {
 	t.Parallel()
 
 	repo := NewRepository()
@@ -122,16 +122,30 @@ func TestRepository_GetReturnsClone(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	err = attempt.MarkSucceeded(now.Add(time.Minute))
+	require.NoError(t, err)
+
 	err = repo.Save(context.Background(), attempt)
 	require.NoError(t, err)
 
-	got, err := repo.GetByID(context.Background(), "pa_123")
+	got, err := repo.GetByID(context.Background(), attempt.ID)
 	require.NoError(t, err)
 
-	got.Status = domain.PaymentStatusFailed
+	require.NotNil(t, got.Timestamps.CompletedAt)
+	assert.Equal(t, now.Add(time.Minute).UTC(), *got.Timestamps.CompletedAt)
+}
 
-	gotAgain, err := repo.GetByID(context.Background(), "pa_123")
+func mustAttempt(t *testing.T) *domain.PaymentAttempt {
+	t.Helper()
+
+	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
+	attempt, err := domain.NewPaymentAttempt(
+		"pa_123",
+		"order_123",
+		domain.Money{Amount: 2500, Currency: "gbp"},
+		now,
+	)
 	require.NoError(t, err)
 
-	assert.Equal(t, domain.PaymentStatusPending, gotAgain.Status)
+	return attempt
 }
