@@ -13,10 +13,10 @@ type Clock func() time.Time
 type IDGenerator func() string
 
 type Service struct {
-	repo        domain.PaymentAttemptRepository
-	gateway     domain.PaymentGateway
-	now         Clock
-	generateID  IDGenerator
+	repo       domain.PaymentAttemptRepository
+	gateway    domain.PaymentGateway
+	now        Clock
+	generateID IDGenerator
 }
 
 type CreatePaymentAttemptInput struct {
