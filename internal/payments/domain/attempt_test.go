@@ -194,3 +194,29 @@ func TestLinkProvider_RejectsOverwrite(t *testing.T) {
 	assert.Equal(t, "pi_123", attempt.Provider.ProviderPaymentID)
 	assert.Equal(t, "secret_123", attempt.Provider.ClientSecret)
 }
+
+func TestMarkFailed_DefaultsToUnknownReasonWhenBlank(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
+	attempt := mustNewAttempt(t, now)
+
+	err := attempt.MarkFailed("", now.Add(time.Minute))
+	require.NoError(t, err)
+
+	assert.Equal(t, PaymentStatusFailed, attempt.Status)
+	assert.Equal(t, FailureReasonUnknown, attempt.FailureReason)
+	require.NotNil(t, attempt.Timestamps.CompletedAt)
+}
+
+func TestMarkFailed_DefaultsToUnknownReasonWhenWhitespace(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
+	attempt := mustNewAttempt(t, now)
+
+	err := attempt.MarkFailed("   ", now.Add(time.Minute))
+	require.NoError(t, err)
+
+	assert.Equal(t, FailureReasonUnknown, attempt.FailureReason)
+}

@@ -178,3 +178,43 @@ func TestService_GetPaymentAttempt(t *testing.T) {
 	assert.Equal(t, "attempt_001", got.ID)
 	assert.Equal(t, domain.PaymentStatusPending, got.Status)
 }
+
+func TestService_CreatePaymentAttempt_FailedUsesProviderFailureReasonConstant(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
+	repo := memoryrepo.NewRepository()
+
+	gateway := &fakeGateway{
+		createPaymentFunc: func(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
+			return domain.CreateProviderPaymentResult{
+				ProviderName:      "stripe",
+				ProviderPaymentID: "pi_failed_123",
+				ClientSecret:      "secret_failed_123",
+				Status:            domain.PaymentStatusFailed,
+			}, nil
+		},
+		getPaymentFunc: func(ctx context.Context, providerPaymentID string) (domain.CreateProviderPaymentResult, error) {
+			return domain.CreateProviderPaymentResult{}, nil
+		},
+	}
+
+	svc := New(
+		repo,
+		gateway,
+		func() time.Time { return now },
+		func() string { return "attempt_failed_123" },
+	)
+
+	result, err := svc.CreatePaymentAttempt(context.Background(), CreatePaymentAttemptInput{
+		OrderID:  "order_failed_123",
+		Amount:   2500,
+		Currency: "GBP",
+	})
+	require.NoError(t, err)
+
+	require.NotNil(t, result)
+	assert.Equal(t, domain.PaymentStatusFailed, result.Attempt.Status)
+	assert.Equal(t, domain.FailureReasonProviderReportedFailed, result.Attempt.FailureReason)
+	require.NotNil(t, result.Attempt.Timestamps.CompletedAt)
+}

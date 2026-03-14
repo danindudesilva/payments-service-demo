@@ -135,7 +135,7 @@ func applyProviderResult(
 		return attempt.MarkSucceeded(now)
 
 	case domain.PaymentStatusFailed:
-		return attempt.MarkFailed("provider reported failure", now)
+		return attempt.MarkFailed(domain.FailureReasonProviderReportedFailed, now)
 
 	case domain.PaymentStatusCancelled:
 		return attempt.MarkCancelled(now)
