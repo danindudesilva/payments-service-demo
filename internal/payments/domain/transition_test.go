@@ -37,10 +37,10 @@ func TestPaymentAttempt_TransitionMatrix(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		from      PaymentStatus
-		to        PaymentStatus
-		wantErr   error
+		name    string
+		from    PaymentStatus
+		to      PaymentStatus
+		wantErr error
 	}{
 		{name: "pending to pending", from: PaymentStatusPending, to: PaymentStatusPending},
 		{name: "pending to requires_action", from: PaymentStatusPending, to: PaymentStatusRequiresAction},
