@@ -11,7 +11,7 @@ import (
 
 	"github.com/danindudesilva/payments-service/internal/config"
 	"github.com/danindudesilva/payments-service/internal/httpserver"
-	"github.com/danindudesilva/payments-service/internal/payments/domain"
+	"github.com/danindudesilva/payments-service/internal/payments/gateway"
 	memoryrepo "github.com/danindudesilva/payments-service/internal/payments/repository/memory"
 	paymentservice "github.com/danindudesilva/payments-service/internal/payments/service"
 	paymenthttp "github.com/danindudesilva/payments-service/internal/payments/transport/http"
@@ -27,7 +27,7 @@ func New(cfg config.Config) *App {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	repo := memoryrepo.NewRepository()
-	gateway := newNoopGateway()
+	gateway := gateway.NewNoopGateway()
 	service := paymentservice.New(
 		repo,
 		gateway,
@@ -87,27 +87,4 @@ func (a *App) Run(ctx context.Context) error {
 
 	a.logger.Info("http server stopped")
 	return nil
-}
-
-type noopGateway struct{}
-
-func newNoopGateway() *noopGateway {
-	return &noopGateway{}
-}
-
-func (g *noopGateway) CreatePayment(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
-	return domain.CreateProviderPaymentResult{
-		ProviderName:      "fake",
-		ProviderPaymentID: "fake_payment_id",
-		ClientSecret:      "fake_client_secret",
-		Status:            domain.PaymentStatusPending,
-	}, nil
-}
-
-func (g *noopGateway) GetPayment(ctx context.Context, providerPaymentID string) (domain.CreateProviderPaymentResult, error) {
-	return domain.CreateProviderPaymentResult{
-		ProviderName:      "fake",
-		ProviderPaymentID: providerPaymentID,
-		Status:            domain.PaymentStatusPending,
-	}, nil
 }
