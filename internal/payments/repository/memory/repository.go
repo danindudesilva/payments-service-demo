@@ -15,7 +15,7 @@ type Repository struct {
 
 func NewRepository() *Repository {
 	return &Repository{
-		attemptsByID:       make(map[string]*domain.PaymentAttempt),
+		attemptsByID:        make(map[string]*domain.PaymentAttempt),
 		attemptIDByProvider: make(map[string]string),
 	}
 }
