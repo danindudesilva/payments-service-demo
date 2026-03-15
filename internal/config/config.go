@@ -12,7 +12,7 @@ type Config struct {
 	StripeSecretKey  string
 }
 
-func MustLoad() Config {
+func Load() (Config, error) {
 	cfg := Config{
 		AppEnv:           getEnv("APP_ENV", "development"),
 		HTTPPort:         getEnv("HTTP_PORT", "8080"),
@@ -21,14 +21,14 @@ func MustLoad() Config {
 	}
 
 	if cfg.HTTPPort == "" {
-		panic("HTTP_PORT must not be empty")
+		return Config{}, fmt.Errorf("HTTP_PORT must not be empty")
 	}
 
 	if cfg.PaymentsProvider == "" {
-		panic("PAYMENTS_PROVIDER must not be empty")
+		return Config{}, fmt.Errorf("PAYMENTS_PROVIDER must not be empty")
 	}
 
-	return cfg
+	return cfg, nil
 }
 
 func (c Config) HTTPAddress() string {
