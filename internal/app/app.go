@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/danindudesilva/payments-service/internal/config"
+	"github.com/danindudesilva/payments-service/internal/demo"
 	"github.com/danindudesilva/payments-service/internal/httpserver"
 	"github.com/danindudesilva/payments-service/internal/payments/gateway"
 	memoryrepo "github.com/danindudesilva/payments-service/internal/payments/repository/memory"
@@ -48,6 +49,12 @@ func New(cfg config.Config) (*App, error) {
 
 	handler := paymenthttp.NewHandler(service, logger)
 	handler.Register(mux)
+
+	demoHandler, err := demo.NewHandler(cfg.StripePublishableKey)
+	if err != nil {
+		return nil, fmt.Errorf("create demo handler: %w", err)
+	}
+	demoHandler.Register(mux)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress(),
