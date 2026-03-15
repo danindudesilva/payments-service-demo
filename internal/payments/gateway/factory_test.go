@@ -17,15 +17,27 @@ func TestNew_FakeProvider(t *testing.T) {
 	require.NotNil(t, gateway)
 }
 
-func TestNew_StripeProviderNotImplementedYet(t *testing.T) {
+func TestNew_StripeProvider_RequiresSecretKey(t *testing.T) {
 	t.Parallel()
 
 	gateway, err := New(config.Config{
 		PaymentsProvider: "stripe",
+		StripeSecretKey:  "",
 	})
 	require.Error(t, err)
 	require.Nil(t, gateway)
-	require.Contains(t, err.Error(), "not implemented")
+	require.Contains(t, err.Error(), "stripe secret key must not be empty")
+}
+
+func TestNew_StripeProvider_SucceedsWithKey(t *testing.T) {
+	t.Parallel()
+
+	gateway, err := New(config.Config{
+		PaymentsProvider: "stripe",
+		StripeSecretKey:  "sk_test_51TApvV",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, gateway)
 }
 
 func TestNew_UnsupportedProvider(t *testing.T) {
