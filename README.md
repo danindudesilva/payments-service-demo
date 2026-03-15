@@ -23,3 +23,12 @@ go run ./cmd/api
 ```
 
 Open http://localhost:8080/healthz.
+
+## Enable pre-commit hook
+
+To enable go fmt to be run pre commit, we need to give the necessary permissions and enable the local hook path before it can be used in development. To do that, run
+
+```bash
+chmod +x .githooks/pre-commit
+git config core.hooksPath .githooks
+```
