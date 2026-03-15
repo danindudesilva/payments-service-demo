@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>payments-service demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://js.stripe.com/v3/"></script>
+  <link rel="stylesheet" href="/demo/static/styles.css">
+</head>
+<body>
+  <main class="container">
+    <h1>payments-service demo</h1>
+
+    <section class="panel">
+      <p>
+        Demo flow: create a payment attempt via the backend, confirm it with Stripe.js,
+        return to the app, and reconcile backend state.
+      </p>
+    </section>
+
+    <form id="create-form" class="panel">
+      <label for="order-id">Order ID</label>
+      <input id="order-id" value="order_demo_123">
+
+      <label for="amount">Amount (minor units)</label>
+      <input id="amount" type="number" value="2500">
+
+      <label for="currency">Currency</label>
+      <input id="currency" value="gbp">
+
+      <button type="submit">Create payment attempt</button>
+    </form>
+
+    <section id="payment-panel" class="panel hidden">
+      <div id="payment-element"></div>
+      <button id="confirm-button" type="button">Confirm payment</button>
+    </section>
+
+    <section class="panel">
+      <button id="reconcile-button" type="button">Reconcile latest backend state</button>
+    </section>
+
+    <section class="panel">
+      <h2>Output</h2>
+      <pre id="output"></pre>
+    </section>
+  </main>
+
+  <script>
+    window.__DEMO_CONFIG__ = {
+      stripePublishableKey: "{{.StripePublishableKey}}"
+    };
+  </script>
+  <script src="/demo/static/app.js"></script>
+</body>
+</html>
