@@ -28,10 +28,16 @@ func New(secretKey string) (*Gateway, error) {
 	}, nil
 }
 
-func (g *Gateway) CreatePayment(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
+func (g *Gateway) CreatePayment(
+	ctx context.Context,
+	request domain.CreateProviderPaymentRequest,
+) (domain.CreateProviderPaymentResult, error) {
 	return domain.CreateProviderPaymentResult{}, fmt.Errorf("not implemented")
 }
 
-func (g *Gateway) GetPayment(ctx context.Context, providerPaymentID string) (domain.CreateProviderPaymentResult, error) {
+func (g *Gateway) GetPayment(
+	ctx context.Context,
+	providerPaymentID string,
+) (domain.CreateProviderPaymentResult, error) {
 	return domain.CreateProviderPaymentResult{}, fmt.Errorf("not implemented")
 }
