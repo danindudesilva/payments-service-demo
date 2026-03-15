@@ -46,23 +46,31 @@ func (g *Gateway) CreatePayment(ctx context.Context, request domain.CreateProvid
 		return domain.CreateProviderPaymentResult{}, fmt.Errorf("create stripe payment intent: %w", err)
 	}
 
-	mappedStatus, err := mapPaymentIntentStatus(intent.Status)
+	result, err := toProviderPaymentResult(intent)
 	if err != nil {
-		return domain.CreateProviderPaymentResult{}, fmt.Errorf("map stripe payment intent status: %w", err)
+		return domain.CreateProviderPaymentResult{}, fmt.Errorf("map stripe payment intent: %w", err)
 	}
 
-	return domain.CreateProviderPaymentResult{
-		ProviderName:      ProviderName,
-		ProviderPaymentID: intent.ID,
-		ClientSecret:      intent.ClientSecret,
-		Status:            mappedStatus,
-		NextAction:        domain.NoNextAction(),
-	}, nil
+	return result, nil
 }
 
 func (g *Gateway) GetPayment(
 	ctx context.Context,
 	providerPaymentID string,
 ) (domain.CreateProviderPaymentResult, error) {
-	return domain.CreateProviderPaymentResult{}, fmt.Errorf("not implemented")
+	if strings.TrimSpace(providerPaymentID) == "" {
+		return domain.CreateProviderPaymentResult{}, fmt.Errorf("provider payment id must not be empty")
+	}
+
+	intent, err := paymentintent.Get(providerPaymentID, nil)
+	if err != nil {
+		return domain.CreateProviderPaymentResult{}, fmt.Errorf("get stripe payment intent: %w", err)
+	}
+
+	result, err := toProviderPaymentResult(intent)
+	if err != nil {
+		return domain.CreateProviderPaymentResult{}, fmt.Errorf("map stripe payment intent: %w", err)
+	}
+
+	return result, nil
 }

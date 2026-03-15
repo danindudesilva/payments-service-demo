@@ -66,3 +66,22 @@ func TestMapPaymentIntentStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestToProviderPaymentResult(t *testing.T) {
+	t.Parallel()
+
+	intent := &stripe.PaymentIntent{
+		ID:           "pi_123",
+		ClientSecret: "secret_123",
+		Status:       stripe.PaymentIntentStatusProcessing,
+	}
+
+	result, err := toProviderPaymentResult(intent)
+	require.NoError(t, err)
+
+	require.Equal(t, ProviderName, result.ProviderName)
+	require.Equal(t, "pi_123", result.ProviderPaymentID)
+	require.Equal(t, "secret_123", result.ClientSecret)
+	require.Equal(t, domain.PaymentStatusProcessing, result.Status)
+	require.Equal(t, domain.NextActionTypeNone, result.NextAction.Type)
+}

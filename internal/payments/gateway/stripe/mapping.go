@@ -29,3 +29,22 @@ func mapPaymentIntentStatus(status stripe.PaymentIntentStatus) (domain.PaymentSt
 		return "", fmt.Errorf("unsupported stripe payment intent status: %s", status)
 	}
 }
+
+func toProviderPaymentResult(intent *stripe.PaymentIntent) (domain.CreateProviderPaymentResult, error) {
+	mappedStatus, err := mapPaymentIntentStatus(intent.Status)
+	if err != nil {
+		return domain.CreateProviderPaymentResult{}, err
+	}
+
+	result := domain.CreateProviderPaymentResult{
+		ProviderName:      ProviderName,
+		ProviderPaymentID: intent.ID,
+		ClientSecret:      intent.ClientSecret,
+		Status:            mappedStatus,
+		NextAction:        domain.NoNextAction(),
+	}
+
+	// TODO: enrich this later when we handle client-side confirmation and 3DS UX.
+
+	return result, nil
+}

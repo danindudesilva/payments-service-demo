@@ -218,3 +218,115 @@ func TestService_CreatePaymentAttempt_FailedUsesProviderFailureReasonConstant(t 
 	assert.Equal(t, domain.FailureReasonProviderReportedFailed, result.Attempt.FailureReason)
 	require.NotNil(t, result.Attempt.Timestamps.CompletedAt)
 }
+
+func TestService_ReconcilePaymentAttempt_UpdatesStatusFromProvider(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
+	repo := memoryrepo.NewRepository()
+
+	attempt, err := domain.NewPaymentAttempt(
+		"attempt_123",
+		"order_123",
+		domain.Money{Amount: 2500, Currency: "GBP"},
+		now,
+	)
+	require.NoError(t, err)
+
+	err = attempt.LinkProvider("stripe", "pi_123", "secret_123", now)
+	require.NoError(t, err)
+
+	err = repo.Save(context.Background(), attempt)
+	require.NoError(t, err)
+
+	gateway := &fakeGateway{
+		createPaymentFunc: func(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
+			return domain.CreateProviderPaymentResult{}, nil
+		},
+		getPaymentFunc: func(ctx context.Context, providerPaymentID string) (domain.CreateProviderPaymentResult, error) {
+			require.Equal(t, "pi_123", providerPaymentID)
+
+			return domain.CreateProviderPaymentResult{
+				ProviderName:      "stripe",
+				ProviderPaymentID: "pi_123",
+				ClientSecret:      "secret_123",
+				Status:            domain.PaymentStatusSucceeded,
+			}, nil
+		},
+	}
+
+	svc := New(
+		repo,
+		gateway,
+		func() time.Time { return now.Add(time.Minute) },
+		func() string { return "unused" },
+	)
+
+	got, err := svc.ReconcilePaymentAttempt(context.Background(), "attempt_123")
+	require.NoError(t, err)
+
+	assert.Equal(t, domain.PaymentStatusSucceeded, got.Status)
+	require.NotNil(t, got.Timestamps.CompletedAt)
+
+	saved, err := repo.GetByID(context.Background(), "attempt_123")
+	require.NoError(t, err)
+	assert.Equal(t, domain.PaymentStatusSucceeded, saved.Status)
+}
+
+func TestService_ReconcilePaymentAttempt_NotFound(t *testing.T) {
+	t.Parallel()
+
+	repo := memoryrepo.NewRepository()
+
+	svc := New(
+		repo,
+		&fakeGateway{
+			createPaymentFunc: func(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
+				return domain.CreateProviderPaymentResult{}, nil
+			},
+			getPaymentFunc: func(ctx context.Context, providerPaymentID string) (domain.CreateProviderPaymentResult, error) {
+				return domain.CreateProviderPaymentResult{}, nil
+			},
+		},
+		time.Now,
+		func() string { return "unused" },
+	)
+
+	_, err := svc.ReconcilePaymentAttempt(context.Background(), "missing")
+	require.ErrorIs(t, err, domain.ErrPaymentNotFound)
+}
+
+func TestService_ReconcilePaymentAttempt_RequiresProviderLink(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
+	repo := memoryrepo.NewRepository()
+
+	attempt, err := domain.NewPaymentAttempt(
+		"attempt_123",
+		"order_123",
+		domain.Money{Amount: 2500, Currency: "GBP"},
+		now,
+	)
+	require.NoError(t, err)
+
+	err = repo.Save(context.Background(), attempt)
+	require.NoError(t, err)
+
+	svc := New(
+		repo,
+		&fakeGateway{
+			createPaymentFunc: func(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
+				return domain.CreateProviderPaymentResult{}, nil
+			},
+			getPaymentFunc: func(ctx context.Context, providerPaymentID string) (domain.CreateProviderPaymentResult, error) {
+				return domain.CreateProviderPaymentResult{}, nil
+			},
+		},
+		time.Now,
+		func() string { return "unused" },
+	)
+
+	_, err = svc.ReconcilePaymentAttempt(context.Background(), "attempt_123")
+	require.ErrorIs(t, err, domain.ErrProviderNotLinked)
+}
