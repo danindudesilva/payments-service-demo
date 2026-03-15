@@ -89,7 +89,7 @@ func TestGetPaymentAttempt(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/payment-attempts/attempt_existing", nil)
 	res := httptest.NewRecorder()
 
-	handler.handlePaymentAttemptByID(res, req)
+	handler.handlePaymentAttemptRoutes(res, req)
 
 	require.Equal(t, http.StatusOK, res.Code)
 	assert.Contains(t, res.Body.String(), `"id":"attempt_existing"`)
@@ -104,7 +104,7 @@ func TestGetPaymentAttempt_NotFound(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/payment-attempts/missing", nil)
 	res := httptest.NewRecorder()
 
-	handler.handlePaymentAttemptByID(res, req)
+	handler.handlePaymentAttemptRoutes(res, req)
 
 	require.Equal(t, http.StatusNotFound, res.Code)
 	assert.Contains(t, res.Body.String(), "payment attempt not found")
@@ -132,7 +132,7 @@ func TestPaymentAttemptByID_MethodNotAllowed(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/payment-attempts/attempt_123", nil)
 	res := httptest.NewRecorder()
 
-	handler.handlePaymentAttemptByID(res, req)
+	handler.handlePaymentAttemptRoutes(res, req)
 
 	require.Equal(t, http.StatusMethodNotAllowed, res.Code)
 	assert.Contains(t, res.Body.String(), "method not allowed")
@@ -146,7 +146,7 @@ func TestPaymentAttemptByID_MissingID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/payment-attempts/", nil)
 	res := httptest.NewRecorder()
 
-	handler.handlePaymentAttemptByID(res, req)
+	handler.handlePaymentAttemptRoutes(res, req)
 
 	require.Equal(t, http.StatusBadRequest, res.Code)
 	assert.Contains(t, res.Body.String(), "payment attempt id is required")
