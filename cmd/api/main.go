@@ -14,7 +14,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	cfg := config.MustLoad()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
 	application, err := app.New(cfg)
 	if err != nil {
 		log.Fatalf("failed to create application: %v", err)
