@@ -116,6 +116,35 @@ func (s *Service) GetPaymentAttempt(ctx context.Context, attemptID string) (*dom
 	return attempt, nil
 }
 
+func (s *Service) ReconcilePaymentAttempt(ctx context.Context, attemptID string) (*domain.PaymentAttempt, error) {
+	attempt, err := s.repo.GetByID(ctx, attemptID)
+	if err != nil {
+		return nil, fmt.Errorf("get payment attempt: %w", err)
+	}
+
+	providerPaymentID, err := attempt.ProviderPaymentID()
+	if err != nil {
+		return nil, fmt.Errorf("get provider payment id: %w", err)
+	}
+
+	providerResult, err := s.gateway.GetPayment(ctx, providerPaymentID)
+	if err != nil {
+		return nil, fmt.Errorf("get provider payment: %w", err)
+	}
+
+	now := s.now()
+
+	if err := applyProviderResult(attempt, providerResult, now); err != nil {
+		return nil, fmt.Errorf("apply provider result: %w", err)
+	}
+
+	if err := s.repo.Save(ctx, attempt); err != nil {
+		return nil, fmt.Errorf("save reconciled payment attempt: %w", err)
+	}
+
+	return attempt, nil
+}
+
 func applyProviderResult(
 	attempt *domain.PaymentAttempt,
 	result domain.CreateProviderPaymentResult,
