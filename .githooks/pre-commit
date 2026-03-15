@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Running gofmt..."
+gofmt -w $(find . -name '*.go' -not -path './vendor/*')
+
+echo "Running go test..."
+go test ./...
