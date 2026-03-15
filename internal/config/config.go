@@ -6,21 +6,29 @@ import (
 )
 
 type Config struct {
-	AppEnv   string
-	HTTPPort string
+	AppEnv           string
+	HTTPPort         string
+	PaymentsProvider string
+	StripeSecretKey  string
 }
 
-func MustLoad() Config {
+func Load() (Config, error) {
 	cfg := Config{
-		AppEnv:   getEnv("APP_ENV", "development"),
-		HTTPPort: getEnv("HTTP_PORT", "8080"),
+		AppEnv:           getEnv("APP_ENV", "development"),
+		HTTPPort:         getEnv("HTTP_PORT", "8080"),
+		PaymentsProvider: getEnv("PAYMENTS_PROVIDER", "fake"),
+		StripeSecretKey:  getEnv("STRIPE_SECRET_KEY", ""),
 	}
 
 	if cfg.HTTPPort == "" {
-		panic("HTTP_PORT must not be empty")
+		return Config{}, fmt.Errorf("HTTP_PORT must not be empty")
 	}
 
-	return cfg
+	if cfg.PaymentsProvider == "" {
+		return Config{}, fmt.Errorf("PAYMENTS_PROVIDER must not be empty")
+	}
+
+	return cfg, nil
 }
 
 func (c Config) HTTPAddress() string {

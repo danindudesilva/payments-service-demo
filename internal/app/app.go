@@ -23,14 +23,19 @@ type App struct {
 	logger *slog.Logger
 }
 
-func New(cfg config.Config) *App {
+func New(cfg config.Config) (*App, error) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	repo := memoryrepo.NewRepository()
-	gateway := gateway.NewNoopGateway()
+
+	paymentGateway, err := gateway.New(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("create payment gateway: %w", err)
+	}
+
 	service := paymentservice.New(
 		repo,
-		gateway,
+		paymentGateway,
 		time.Now,
 		func() string {
 			return fmt.Sprintf("attempt_%d", time.Now().UnixNano())
@@ -54,7 +59,7 @@ func New(cfg config.Config) *App {
 		cfg:    cfg,
 		server: server,
 		logger: logger,
-	}
+	}, nil
 }
 
 func (a *App) Run(ctx context.Context) error {
@@ -64,6 +69,7 @@ func (a *App) Run(ctx context.Context) error {
 		a.logger.Info("http server starting",
 			slog.String("addr", a.server.Addr),
 			slog.String("env", a.cfg.AppEnv),
+			slog.String("payments_provider", a.cfg.PaymentsProvider),
 		)
 
 		if err := a.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
