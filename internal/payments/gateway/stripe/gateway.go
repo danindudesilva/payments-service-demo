@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	stripe "github.com/stripe/stripe-go/v82"
-	"github.com/stripe/stripe-go/v82/paymentintent"
 
 	"github.com/danindudesilva/payments-service/internal/payments/domain"
 )
@@ -30,7 +29,7 @@ func New(secretKey string) (*Gateway, error) {
 }
 
 func (g *Gateway) CreatePayment(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
-	params := &stripe.PaymentIntentParams{
+	params := &stripe.PaymentIntentCreateParams{
 		Amount:      stripe.Int64(request.Money.Amount),
 		Currency:    stripe.String(strings.ToLower(request.Money.Currency)),
 		Description: stripe.String(request.Description),
@@ -41,7 +40,7 @@ func (g *Gateway) CreatePayment(ctx context.Context, request domain.CreateProvid
 		MetadataKeyOrderID:   request.OrderID,
 	}
 
-	intent, err := paymentintent.New(params)
+	intent, err := g.client.V1PaymentIntents.Create(ctx, params)
 	if err != nil {
 		return domain.CreateProviderPaymentResult{}, fmt.Errorf("create stripe payment intent: %w", err)
 	}
@@ -62,7 +61,7 @@ func (g *Gateway) GetPayment(
 		return domain.CreateProviderPaymentResult{}, fmt.Errorf("provider payment id must not be empty")
 	}
 
-	intent, err := paymentintent.Get(providerPaymentID, nil)
+	intent, err := g.client.V1PaymentIntents.Retrieve(ctx, providerPaymentID, &stripe.PaymentIntentRetrieveParams{})
 	if err != nil {
 		return domain.CreateProviderPaymentResult{}, fmt.Errorf("get stripe payment intent: %w", err)
 	}
