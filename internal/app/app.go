@@ -27,10 +27,15 @@ func New(cfg config.Config) *App {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	repo := memoryrepo.NewRepository()
-	gateway := gateway.NewNoopGateway()
+
+	paymentGateway, err := gateway.New(cfg)
+	if err != nil {
+		panic(fmt.Sprintf("create payment gateway: %v", err))
+	}
+
 	service := paymentservice.New(
 		repo,
-		gateway,
+		paymentGateway,
 		time.Now,
 		func() string {
 			return fmt.Sprintf("attempt_%d", time.Now().UnixNano())
@@ -64,6 +69,7 @@ func (a *App) Run(ctx context.Context) error {
 		a.logger.Info("http server starting",
 			slog.String("addr", a.server.Addr),
 			slog.String("env", a.cfg.AppEnv),
+			slog.String("payments_provider", a.cfg.PaymentsProvider),
 		)
 
 		if err := a.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
