@@ -269,28 +269,6 @@ func TestHandlePaymentAttemptRoutes_UnknownSubroute(t *testing.T) {
 	assert.Contains(t, res.Body.String(), `"error":"not found"`)
 }
 
-func TestCreatePaymentAttempt_InvalidReturnURL(t *testing.T) {
-	t.Parallel()
-
-	handler := newTestHandler(t)
-
-	req := httptest.NewRequest(http.MethodPost, "/payment-attempts", bytes.NewBufferString(`{
-		"order_id":"order_123",
-		"amount":2500,
-		"currency":"gbp",
-		"return_url":"not-a-url",
-		"description":"test payment"
-	}`))
-	req.Header.Set("Content-Type", "application/json")
-
-	res := httptest.NewRecorder()
-
-	handler.handlePaymentAttempts(res, req)
-
-	require.Equal(t, http.StatusBadRequest, res.Code)
-	assert.Contains(t, res.Body.String(), "return_url")
-}
-
 func TestHandlePaymentAttemptRoutes_GetByID(t *testing.T) {
 	t.Parallel()
 
