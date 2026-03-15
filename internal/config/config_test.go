@@ -17,8 +17,6 @@ func TestHTTPAddress(t *testing.T) {
 }
 
 func TestLoadDefaults(t *testing.T) {
-	t.Parallel()
-
 	unsetEnv(t, "APP_ENV")
 	unsetEnv(t, "HTTP_PORT")
 	unsetEnv(t, "PAYMENTS_PROVIDER")
@@ -31,6 +29,48 @@ func TestLoadDefaults(t *testing.T) {
 	assert.Equal(t, "8080", cfg.HTTPPort)
 	assert.Equal(t, "fake", cfg.PaymentsProvider)
 	assert.Equal(t, "", cfg.StripeSecretKey)
+}
+
+func TestLoad_StripeProviderRequiresSecretKey(t *testing.T) {
+	unsetEnv(t, "APP_ENV")
+	unsetEnv(t, "HTTP_PORT")
+	unsetEnv(t, "STRIPE_SECRET_KEY")
+	unsetEnv(t, "STRIPE_PUBLISHABLE_KEY")
+
+	t.Setenv("PAYMENTS_PROVIDER", "stripe")
+
+	_, err := Load()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "STRIPE_SECRET_KEY must not be empty")
+}
+
+func TestLoad_StripeProviderRequiresPublishableKey(t *testing.T) {
+	unsetEnv(t, "APP_ENV")
+	unsetEnv(t, "HTTP_PORT")
+
+	t.Setenv("PAYMENTS_PROVIDER", "stripe")
+	t.Setenv("STRIPE_SECRET_KEY", "sk_test_123")
+	unsetEnv(t, "STRIPE_PUBLISHABLE_KEY")
+
+	_, err := Load()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "STRIPE_PUBLISHABLE_KEY must not be empty")
+}
+
+func TestLoad_StripeProviderWithRequiredKeys(t *testing.T) {
+	unsetEnv(t, "APP_ENV")
+	unsetEnv(t, "HTTP_PORT")
+
+	t.Setenv("PAYMENTS_PROVIDER", "stripe")
+	t.Setenv("STRIPE_SECRET_KEY", "sk_test_123")
+	t.Setenv("STRIPE_PUBLISHABLE_KEY", "pk_test_123")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	assert.Equal(t, "stripe", cfg.PaymentsProvider)
+	assert.Equal(t, "sk_test_123", cfg.StripeSecretKey)
+	assert.Equal(t, "pk_test_123", cfg.StripePublishableKey)
 }
 
 func unsetEnv(t *testing.T, key string) {
