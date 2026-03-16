@@ -219,6 +219,7 @@ func mustAttemptWithStatus(t *testing.T, status PaymentStatus) *PaymentAttempt {
 	attempt, err := NewPaymentAttempt(
 		"pa_123",
 		"order_123",
+		"https://example.com/return",
 		Money{Amount: 2500, Currency: "GBP"},
 		now,
 	)

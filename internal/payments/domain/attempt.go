@@ -9,6 +9,7 @@ import (
 type PaymentAttempt struct {
 	ID            string
 	OrderID       string
+	ReturnURL     string
 	Status        PaymentStatus
 	Money         Money
 	NextAction    NextAction
@@ -21,6 +22,7 @@ type PaymentAttempt struct {
 func NewPaymentAttempt(
 	id string,
 	orderID string,
+	returnURL string,
 	money Money,
 	now time.Time,
 ) (*PaymentAttempt, error) {
@@ -32,14 +34,19 @@ func NewPaymentAttempt(
 		return nil, fmt.Errorf("orderID must not be empty")
 	}
 
+	if strings.TrimSpace(returnURL) == "" {
+		return nil, fmt.Errorf("returnURL must not be empty")
+	}
+
 	if err := validateMoney(money); err != nil {
 		return nil, err
 	}
 
 	return &PaymentAttempt{
-		ID:      id,
-		OrderID: orderID,
-		Status:  PaymentStatusPending,
+		ID:        id,
+		OrderID:   orderID,
+		ReturnURL: returnURL,
+		Status:    PaymentStatusPending,
 		Money: Money{
 			Amount:   money.Amount,
 			Currency: strings.ToUpper(strings.TrimSpace(money.Currency)),

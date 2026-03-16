@@ -63,6 +63,7 @@ func (s *Service) CreatePaymentAttempt(
 	attempt, err := domain.NewPaymentAttempt(
 		attemptID,
 		input.OrderID,
+		input.ReturnURL,
 		domain.Money{
 			Amount:   input.Amount,
 			Currency: input.Currency,

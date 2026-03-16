@@ -13,7 +13,7 @@ import (
 	"github.com/danindudesilva/payments-service/internal/demo"
 	"github.com/danindudesilva/payments-service/internal/httpserver"
 	"github.com/danindudesilva/payments-service/internal/payments/gateway"
-	memoryrepo "github.com/danindudesilva/payments-service/internal/payments/repository/memory"
+	pg "github.com/danindudesilva/payments-service/internal/payments/repository/postgres"
 	paymentservice "github.com/danindudesilva/payments-service/internal/payments/service"
 	paymenthttp "github.com/danindudesilva/payments-service/internal/payments/transport/http"
 	"github.com/danindudesilva/payments-service/internal/platform/database"
@@ -37,7 +37,7 @@ func New(cfg config.Config) (*App, error) {
 		return nil, fmt.Errorf("create database pool: %w", err)
 	}
 
-	repo := memoryrepo.NewRepository()
+	repo := pg.NewRepository(dbPool)
 
 	paymentGateway, err := gateway.New(gateway.Config{
 		PaymentsProvider:     cfg.PaymentsProvider,

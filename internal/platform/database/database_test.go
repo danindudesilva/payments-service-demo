@@ -30,3 +30,20 @@ func TestNewPool_PingFails(t *testing.T) {
 	require.Nil(t, pool)
 	require.ErrorContains(t, err, "ping database")
 }
+
+func TestNewPool_Success(t *testing.T) {
+	t.Parallel()
+
+	pool, err := NewPool(context.Background(), Config{
+		DatabaseURL: "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable",
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, pool)
+
+	t.Cleanup(func() {
+		pool.Close()
+	})
+
+	require.NoError(t, pool.Ping(context.Background()))
+}
