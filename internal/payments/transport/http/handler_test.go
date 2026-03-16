@@ -71,6 +71,28 @@ func TestCreatePaymentAttemptRoutes_InvalidJSON(t *testing.T) {
 	assert.Contains(t, res.Body.String(), "invalid json body")
 }
 
+func TestCreatePaymentAttempt_MissingIdempotencyKeyHeader(t *testing.T) {
+	t.Parallel()
+
+	handler := newTestHandler(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/payment-attempts", bytes.NewBufferString(`{
+		"order_id":"order_123",
+		"amount":2500,
+		"currency":"gbp",
+		"return_url":"https://example.com/return",
+		"description":"test payment"
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	res := httptest.NewRecorder()
+
+	handler.handlePaymentAttempts(res, req)
+
+	require.Equal(t, http.StatusBadRequest, res.Code)
+	assert.Contains(t, res.Body.String(), "Idempotency-Key header is required")
+}
+
 func TestGetPaymentAttemptRoutes(t *testing.T) {
 	t.Parallel()
 

@@ -149,6 +149,53 @@ func TestService_CreatePaymentAttempt_GatewayError(t *testing.T) {
 	require.ErrorIs(t, getErr, domain.ErrPaymentNotFound)
 }
 
+func TestService_CreatePaymentAttempt_IsIdempotent(t *testing.T) {
+	repo := memoryrepo.NewRepository()
+	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
+
+	createCalls := 0
+	gateway := &fakeGateway{
+		createPaymentFunc: func(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
+			createCalls++
+			return domain.CreateProviderPaymentResult{
+				ProviderName:      "stripe",
+				ProviderPaymentID: "pi_123",
+				ClientSecret:      "secret_123",
+				Status:            domain.PaymentStatusPending,
+			}, nil
+		},
+		getPaymentFunc: func(ctx context.Context, providerPaymentID string) (domain.CreateProviderPaymentResult, error) {
+			return domain.CreateProviderPaymentResult{}, nil
+		},
+	}
+
+	svc := New(
+		repo,
+		gateway,
+		func() time.Time { return now },
+		func() string { return "attempt_123" },
+	)
+
+	input := CreatePaymentAttemptInput{
+		OrderID:        "order_123",
+		IdempotencyKey: "idem_123",
+		Amount:         2500,
+		Currency:       "GBP",
+		ReturnURL:      "https://example.com/return",
+		Description:    "test payment",
+	}
+
+	first, err := svc.CreatePaymentAttempt(context.Background(), input)
+	require.NoError(t, err)
+
+	second, err := svc.CreatePaymentAttempt(context.Background(), input)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, createCalls)
+	assert.Equal(t, first.Attempt.ID, second.Attempt.ID)
+	assert.Equal(t, "idem_123", second.Attempt.IdempotencyKey)
+}
+
 func TestService_GetPaymentAttempt(t *testing.T) {
 	t.Parallel()
 
