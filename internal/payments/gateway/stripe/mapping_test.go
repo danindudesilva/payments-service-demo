@@ -5,7 +5,7 @@ import (
 
 	"github.com/danindudesilva/payments-service/internal/payments/domain"
 	"github.com/stretchr/testify/require"
-	stripe "github.com/stripe/stripe-go/v82"
+	stripe "github.com/stripe/stripe-go/v84"
 )
 
 func TestMapPaymentIntentStatus(t *testing.T) {

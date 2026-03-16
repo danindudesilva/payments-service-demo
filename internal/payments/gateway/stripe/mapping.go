@@ -3,7 +3,7 @@ package stripe
 import (
 	"fmt"
 
-	stripe "github.com/stripe/stripe-go/v82"
+	stripe "github.com/stripe/stripe-go/v84"
 
 	"github.com/danindudesilva/payments-service/internal/payments/domain"
 )

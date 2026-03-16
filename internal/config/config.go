@@ -12,6 +12,7 @@ type Config struct {
 	PaymentsProvider     string
 	StripeSecretKey      string
 	StripePublishableKey string
+	StripeWebhookSecret  string
 	DatabaseURL          string
 }
 
@@ -22,6 +23,7 @@ func Load() (Config, error) {
 		PaymentsProvider:     getEnv("PAYMENTS_PROVIDER", "fake"),
 		StripeSecretKey:      getEnv("STRIPE_SECRET_KEY", ""),
 		StripePublishableKey: getEnv("STRIPE_PUBLISHABLE_KEY", ""),
+		StripeWebhookSecret:  getEnv("STRIPE_WEBHOOK_SECRET", ""),
 		DatabaseURL:          getEnv("DATABASE_URL", ""),
 	}
 
@@ -43,6 +45,9 @@ func Load() (Config, error) {
 		}
 		if strings.TrimSpace(cfg.StripePublishableKey) == "" {
 			return Config{}, fmt.Errorf("STRIPE_PUBLISHABLE_KEY must not be empty when PAYMENTS_PROVIDER=stripe")
+		}
+		if strings.TrimSpace(cfg.StripeWebhookSecret) == "" {
+			return Config{}, fmt.Errorf("STRIPE_WEBHOOK_SECRET must not be empty when PAYMENTS_PROVIDER=stripe")
 		}
 	}
 

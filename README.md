@@ -42,6 +42,7 @@ Environment variables:
 - `PAYMENTS_PROVIDER` - payment gateway provider, defaults to `fake`
 - `STRIPE_SECRET_KEY` - Stripe secret key, used when `PAYMENTS_PROVIDER=stripe`
 - `STRIPE_PUBLISHABLE_KEY` - Stripe publishable key, used when `PAYMENTS_PROVIDER=stripe`
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret, required when `PAYMENTS_PROVIDER=stripe`
 - `DATABASE_URL` - PostgreSQL connection string, required
 
 ## Available endpoints
@@ -49,6 +50,7 @@ Environment variables:
 - `GET /healthz`
 - `POST /payment-attempts`
 - `GET /payment-attempts/{id}`
+-  `POST /webhooks/stripe`
 
 ## Example: create a payment attempt
 
@@ -56,6 +58,7 @@ Environment variables:
 curl -i \
   -X POST http://localhost:8080/payment-attempts \
   -H "Content-Type: application/json" \
+  -H "Idempotency-Key: idempotency-key-123" \
   -d '{
     "order_id": "order_123",
     "amount": 2500,
@@ -105,3 +108,34 @@ The initial schema is in:
 ```
 db/schema.sql
 ```
+
+## Local webhook testing with Stripe CLI
+
+Install the Stripe CLI and authenticate:
+```bash
+brew install stripe/stripe-cli/stripe
+```
+and
+```bash
+stripe login
+```
+Start forwarding Stripe webhook events to your local service:
+```bash
+stripe listen --forward-to localhost:8080/webhooks/stripe
+```
+The CLI will print a webhook signing secret. Export it before starting the app:
+```bash
+export STRIPE_WEBHOOK_SECRET="whsec_..."
+```
+Trigger a test webhook event:
+```bash
+stripe trigger payment_intent.succeeded
+```
+You can also trigger other useful events such as:
+```bash
+stripe trigger payment_intent.payment_failed
+stripe trigger payment_intent.processing
+```
+
+## Dependencies
+This project currently uses Stripe Go SDK `github.com/stripe/stripe-go/v84`.

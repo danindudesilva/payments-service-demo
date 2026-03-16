@@ -73,6 +73,7 @@ func TestLoad_StripeProviderWithRequiredKeys(t *testing.T) {
 	t.Setenv("PAYMENTS_PROVIDER", "stripe")
 	t.Setenv("STRIPE_SECRET_KEY", "sk_test_123")
 	t.Setenv("STRIPE_PUBLISHABLE_KEY", "pk_test_123")
+	t.Setenv("STRIPE_WEBHOOK_SECRET", "whsec_123")
 
 	cfg, err := Load()
 	require.NoError(t, err)
@@ -95,4 +96,29 @@ func unsetEnv(t *testing.T, key string) {
 		}
 		_ = os.Unsetenv(key)
 	})
+}
+
+func TestLoad_StripeProviderRequiresWebhookSecret(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable")
+	t.Setenv("PAYMENTS_PROVIDER", "stripe")
+	t.Setenv("STRIPE_SECRET_KEY", "sk_test_123")
+	t.Setenv("STRIPE_PUBLISHABLE_KEY", "pk_test_123")
+	unsetEnv(t, "STRIPE_WEBHOOK_SECRET")
+
+	_, err := Load()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "STRIPE_WEBHOOK_SECRET must not be empty")
+}
+
+func TestLoad_StripeProviderWithWebhookSecret(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable")
+	t.Setenv("PAYMENTS_PROVIDER", "stripe")
+	t.Setenv("STRIPE_SECRET_KEY", "sk_test_123")
+	t.Setenv("STRIPE_PUBLISHABLE_KEY", "pk_test_123")
+	t.Setenv("STRIPE_WEBHOOK_SECRET", "whsec_123")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	assert.Equal(t, "whsec_123", cfg.StripeWebhookSecret)
 }
