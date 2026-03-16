@@ -7,21 +7,23 @@ import (
 )
 
 type PaymentAttempt struct {
-	ID            string
-	OrderID       string
-	ReturnURL     string
-	Status        PaymentStatus
-	Money         Money
-	NextAction    NextAction
-	Provider      ProviderDetails
-	PaymentMethod PaymentMethodDetails
-	Timestamps    PaymentAttemptTimestamps
-	FailureReason string
+	ID             string
+	OrderID        string
+	IdempotencyKey string
+	ReturnURL      string
+	Status         PaymentStatus
+	Money          Money
+	NextAction     NextAction
+	Provider       ProviderDetails
+	PaymentMethod  PaymentMethodDetails
+	Timestamps     PaymentAttemptTimestamps
+	FailureReason  string
 }
 
 func NewPaymentAttempt(
 	id string,
 	orderID string,
+	idempotencyKey string,
 	returnURL string,
 	money Money,
 	now time.Time,
@@ -34,6 +36,10 @@ func NewPaymentAttempt(
 		return nil, fmt.Errorf("orderID must not be empty")
 	}
 
+	if strings.TrimSpace(idempotencyKey) == "" {
+		return nil, fmt.Errorf("idempotencyKey must not be empty")
+	}
+
 	if strings.TrimSpace(returnURL) == "" {
 		return nil, fmt.Errorf("returnURL must not be empty")
 	}
@@ -43,10 +49,11 @@ func NewPaymentAttempt(
 	}
 
 	return &PaymentAttempt{
-		ID:        id,
-		OrderID:   orderID,
-		ReturnURL: returnURL,
-		Status:    PaymentStatusPending,
+		ID:             id,
+		OrderID:        orderID,
+		IdempotencyKey: idempotencyKey,
+		ReturnURL:      returnURL,
+		Status:         PaymentStatusPending,
 		Money: Money{
 			Amount:   money.Amount,
 			Currency: strings.ToUpper(strings.TrimSpace(money.Currency)),

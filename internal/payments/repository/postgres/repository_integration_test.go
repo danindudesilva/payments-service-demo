@@ -128,6 +128,7 @@ func TestRepository_SaveAndGetByID_PreservesCompletedAt(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_completed",
 		"order_completed",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "GBP"},
 		now,
@@ -192,6 +193,7 @@ func mustNewAttempt(t *testing.T) *domain.PaymentAttempt {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_123",
 		"order_123",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "GBP"},
 		now,

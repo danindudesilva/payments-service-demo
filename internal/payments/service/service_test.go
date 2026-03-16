@@ -152,6 +152,7 @@ func TestService_GetPaymentAttempt(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_001",
 		"order_001",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 1200, Currency: "GBP"},
 		now,
@@ -231,6 +232,7 @@ func TestService_ReconcilePaymentAttempt_UpdatesStatusFromProvider(t *testing.T)
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_123",
 		"order_123",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "GBP"},
 		now,
@@ -309,6 +311,7 @@ func TestService_ReconcilePaymentAttempt_RequiresProviderLink(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_123",
 		"order_123",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "GBP"},
 		now,

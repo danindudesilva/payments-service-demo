@@ -78,6 +78,7 @@ func TestGetPaymentAttemptRoutes(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_existing",
 		"order_existing",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 4200, Currency: "GBP"},
 		now,
@@ -200,6 +201,7 @@ func TestReconcilePaymentAttempt(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_existing",
 		"order_existing",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 4200, Currency: "GBP"},
 		now,
@@ -302,6 +304,7 @@ func TestHandlePaymentAttemptRoutes_GetByID(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_existing",
 		"order_existing",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 4200, Currency: "GBP"},
 		now,
@@ -330,6 +333,7 @@ func TestHandlePaymentAttemptRoutes_Reconcile(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_existing",
 		"order_existing",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 4200, Currency: "GBP"},
 		now,
