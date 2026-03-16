@@ -21,6 +21,9 @@ func TestLoadDefaults(t *testing.T) {
 	unsetEnv(t, "HTTP_PORT")
 	unsetEnv(t, "PAYMENTS_PROVIDER")
 	unsetEnv(t, "STRIPE_SECRET_KEY")
+	unsetEnv(t, "STRIPE_PUBLISHABLE_KEY")
+
+	t.Setenv("DATABASE_URL", "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable")
 
 	cfg, err := Load()
 	require.NoError(t, err)
@@ -29,15 +32,23 @@ func TestLoadDefaults(t *testing.T) {
 	assert.Equal(t, "8080", cfg.HTTPPort)
 	assert.Equal(t, "fake", cfg.PaymentsProvider)
 	assert.Equal(t, "", cfg.StripeSecretKey)
+	assert.Equal(t, "", cfg.StripePublishableKey)
+	assert.Equal(t, "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable", cfg.DatabaseURL)
+}
+
+func TestLoad_RequiresDatabaseURL(t *testing.T) {
+	unsetEnv(t, "DATABASE_URL")
+
+	_, err := Load()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "DATABASE_URL must not be empty")
 }
 
 func TestLoad_StripeProviderRequiresSecretKey(t *testing.T) {
-	unsetEnv(t, "APP_ENV")
-	unsetEnv(t, "HTTP_PORT")
+	t.Setenv("DATABASE_URL", "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable")
+	t.Setenv("PAYMENTS_PROVIDER", "stripe")
 	unsetEnv(t, "STRIPE_SECRET_KEY")
 	unsetEnv(t, "STRIPE_PUBLISHABLE_KEY")
-
-	t.Setenv("PAYMENTS_PROVIDER", "stripe")
 
 	_, err := Load()
 	require.Error(t, err)
@@ -45,9 +56,8 @@ func TestLoad_StripeProviderRequiresSecretKey(t *testing.T) {
 }
 
 func TestLoad_StripeProviderRequiresPublishableKey(t *testing.T) {
-	unsetEnv(t, "APP_ENV")
-	unsetEnv(t, "HTTP_PORT")
 
+	t.Setenv("DATABASE_URL", "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable")
 	t.Setenv("PAYMENTS_PROVIDER", "stripe")
 	t.Setenv("STRIPE_SECRET_KEY", "sk_test_123")
 	unsetEnv(t, "STRIPE_PUBLISHABLE_KEY")
@@ -58,9 +68,8 @@ func TestLoad_StripeProviderRequiresPublishableKey(t *testing.T) {
 }
 
 func TestLoad_StripeProviderWithRequiredKeys(t *testing.T) {
-	unsetEnv(t, "APP_ENV")
-	unsetEnv(t, "HTTP_PORT")
 
+	t.Setenv("DATABASE_URL", "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable")
 	t.Setenv("PAYMENTS_PROVIDER", "stripe")
 	t.Setenv("STRIPE_SECRET_KEY", "sk_test_123")
 	t.Setenv("STRIPE_PUBLISHABLE_KEY", "pk_test_123")
