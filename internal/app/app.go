@@ -16,21 +16,32 @@ import (
 	memoryrepo "github.com/danindudesilva/payments-service/internal/payments/repository/memory"
 	paymentservice "github.com/danindudesilva/payments-service/internal/payments/service"
 	paymenthttp "github.com/danindudesilva/payments-service/internal/payments/transport/http"
+	"github.com/danindudesilva/payments-service/internal/platform/database"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type App struct {
 	cfg    config.Config
 	server *http.Server
 	logger *slog.Logger
+	dbPool *pgxpool.Pool
 }
 
 func New(cfg config.Config) (*App, error) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
+	dbPool, err := database.NewPool(context.Background(), database.Config{
+		DatabaseURL: cfg.DatabaseURL,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create database pool: %w", err)
+	}
+
 	repo := memoryrepo.NewRepository()
 
 	paymentGateway, err := gateway.New(cfg)
 	if err != nil {
+		dbPool.Close()
 		return nil, fmt.Errorf("create payment gateway: %w", err)
 	}
 
@@ -52,6 +63,7 @@ func New(cfg config.Config) (*App, error) {
 
 	demoHandler, err := demo.NewHandler(cfg.StripePublishableKey)
 	if err != nil {
+		dbPool.Close()
 		return nil, fmt.Errorf("create demo handler: %w", err)
 	}
 	demoHandler.Register(mux)
@@ -66,6 +78,7 @@ func New(cfg config.Config) (*App, error) {
 		cfg:    cfg,
 		server: server,
 		logger: logger,
+		dbPool: dbPool,
 	}, nil
 }
 
@@ -96,6 +109,10 @@ func (a *App) Run(ctx context.Context) error {
 
 	if err := a.server.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("shutdown http server: %w", err)
+	}
+
+	if a.dbPool != nil {
+		a.dbPool.Close()
 	}
 
 	a.logger.Info("http server stopped")
