@@ -65,7 +65,7 @@ func New(cfg config.Config) (*App, error) {
 	handler := paymenthttp.NewHandler(service, logger)
 	handler.Register(mux)
 
-	webhookHandler := paymenthttp.NewWebhookHandler(logger, cfg.StripeWebhookSecret)
+	webhookHandler := paymenthttp.NewWebhookHandler(logger, cfg.StripeWebhookSecret, service)
 	webhookHandler.Register(mux)
 
 	demoHandler, err := demo.NewHandler(cfg.StripePublishableKey)

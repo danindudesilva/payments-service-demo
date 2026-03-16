@@ -137,5 +137,26 @@ stripe trigger payment_intent.payment_failed
 stripe trigger payment_intent.processing
 ```
 
+## Webhook event processing
+
+The service processes these verified Stripe webhook events:
+
+- `payment_intent.succeeded`
+- `payment_intent.payment_failed`
+- `payment_intent.processing`
+- `payment_intent.canceled`
+
+For each supported event, the backend:
+
+1. verifies the Stripe signature using the raw request body
+2. parses the webhook event
+3. extracts the Stripe `PaymentIntent` ID
+4. finds the local `PaymentAttempt` by `provider_payment_id`
+5. updates the local payment status in PostgreSQL
+
+Unhandled Stripe event types are currently ignored and acknowledged with `200 OK`.
+
+Duplicate webhook delivery handling is added in the future.
+
 ## Dependencies
 This project currently uses Stripe Go SDK `github.com/stripe/stripe-go/v84`.

@@ -1,9 +1,7 @@
 package http
 
 import (
-	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,15 +9,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	stripe "github.com/stripe/stripe-go/v84"
-	"github.com/stripe/stripe-go/v84/webhook"
 )
 
 func TestStripeWebhook_MethodNotAllowed(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	handler := NewWebhookHandler(logger, "whsec_test_secret")
+	handler := newWebhookTestHandlerWithDefaults()
 
 	req := httptest.NewRequest(http.MethodGet, "/webhooks/stripe", nil)
 	res := httptest.NewRecorder()
@@ -33,8 +28,7 @@ func TestStripeWebhook_MethodNotAllowed(t *testing.T) {
 func TestStripeWebhook_InvalidSignature(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	handler := NewWebhookHandler(logger, "whsec_test_secret")
+	handler := newWebhookTestHandlerWithDefaults()
 
 	payload := `{"id":"evt_test","object":"event","type":"payment_intent.succeeded"}`
 	req := httptest.NewRequest(http.MethodPost, "/webhooks/stripe", strings.NewReader(payload))
@@ -45,32 +39,15 @@ func TestStripeWebhook_InvalidSignature(t *testing.T) {
 	handler.handleStripeWebhook(res, req)
 
 	require.Equal(t, http.StatusBadRequest, res.Code)
-	assert.Contains(t, res.Body.String(), "invalid webhook signature")
+	assert.Contains(t, res.Body.String(), "invalid webhook payload or signature")
 }
 
 func TestStripeWebhook_ValidSignature(t *testing.T) {
 	t.Parallel()
 
-	const secret = "whsec_test_secret"
+	handler := newWebhookTestHandlerWithDefaults()
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	handler := NewWebhookHandler(logger, secret)
-
-	payload := fmt.Sprintf(`{
-		"id":"evt_test",
-		"object":"event",
-		"type":"payment_intent.succeeded",
-		"api_version":"%s"
-	}`, stripe.APIVersion)
-
-	signature := webhook.GenerateTestSignedPayload(&webhook.UnsignedPayload{
-		Payload: []byte(payload),
-		Secret:  secret,
-	})
-
-	req := httptest.NewRequest(http.MethodPost, "/webhooks/stripe", strings.NewReader(payload))
-	req.Header.Set("Stripe-Signature", signature.Header)
-
+	req := newSignedWebhookRequest("charge.refunded", `{"id":"ch_123","object":"charge"}`)
 	res := httptest.NewRecorder()
 
 	handler.handleStripeWebhook(res, req)
@@ -78,14 +55,13 @@ func TestStripeWebhook_ValidSignature(t *testing.T) {
 	require.Equal(t, http.StatusOK, res.Code)
 	assert.Contains(t, res.Body.String(), `"received":true`)
 	assert.Contains(t, res.Body.String(), `"id":"evt_test"`)
-	assert.Contains(t, res.Body.String(), `"type":"payment_intent.succeeded"`)
+	assert.Contains(t, res.Body.String(), `"type":"charge.refunded"`)
 }
 
 func TestStripeWebhook_InvalidBodyReadStillHandled(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	handler := NewWebhookHandler(logger, "whsec_test_secret")
+	handler := newWebhookTestHandlerWithDefaults()
 
 	req := httptest.NewRequest(http.MethodPost, "/webhooks/stripe", strings.NewReader("ignored"))
 	req.Body = io.NopCloser(failingReader{})
