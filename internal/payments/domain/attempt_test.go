@@ -14,6 +14,7 @@ func TestNewPaymentAttempt(t *testing.T) {
 	attempt, err := NewPaymentAttempt(
 		"pa_123",
 		"order_123",
+		"https://example.com/return",
 		Money{Amount: 2500, Currency: "GBP"},
 		now,
 	)
@@ -28,6 +29,7 @@ func TestNewPaymentAttempt_InvalidMoney(t *testing.T) {
 	_, err := NewPaymentAttempt(
 		"pa_123",
 		"order_123",
+		"https://example.com/return",
 		Money{Amount: 0, Currency: "GBP"},
 		time.Now(),
 	)
@@ -40,6 +42,7 @@ func TestLinkProvider(t *testing.T) {
 	attempt, err := NewPaymentAttempt(
 		"pa_123",
 		"order_123",
+		"https://example.com/return",
 		Money{Amount: 2500, Currency: "GBP"},
 		now,
 	)
@@ -150,6 +153,7 @@ func mustNewAttempt(t *testing.T, now time.Time) *PaymentAttempt {
 	attempt, err := NewPaymentAttempt(
 		"pa_123",
 		"order_123",
+		"https://example.com/return",
 		Money{Amount: 2500, Currency: "GBP"},
 		now,
 	)
@@ -219,4 +223,19 @@ func TestMarkFailed_DefaultsToUnknownReasonWhenWhitespace(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, FailureReasonUnknown, attempt.FailureReason)
+}
+
+func TestNewPaymentAttempt_ReturnURLRequired(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewPaymentAttempt(
+		"pa_123",
+		"order_123",
+		"",
+		Money{Amount: 2500, Currency: "GBP"},
+		time.Now(),
+	)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "returnURL must not be empty")
 }

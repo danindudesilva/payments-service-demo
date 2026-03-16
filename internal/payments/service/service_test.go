@@ -98,9 +98,10 @@ func TestService_CreatePaymentAttempt_Succeeded(t *testing.T) {
 	)
 
 	result, err := svc.CreatePaymentAttempt(context.Background(), CreatePaymentAttemptInput{
-		OrderID:  "order_456",
-		Amount:   5000,
-		Currency: "GBP",
+		OrderID:   "order_456",
+		Amount:    5000,
+		Currency:  "GBP",
+		ReturnURL: "https://example.com/return",
 	})
 	require.NoError(t, err)
 
@@ -151,6 +152,7 @@ func TestService_GetPaymentAttempt(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_001",
 		"order_001",
+		"https://example.com/return",
 		domain.Money{Amount: 1200, Currency: "GBP"},
 		now,
 	)
@@ -207,9 +209,10 @@ func TestService_CreatePaymentAttempt_FailedUsesProviderFailureReasonConstant(t 
 	)
 
 	result, err := svc.CreatePaymentAttempt(context.Background(), CreatePaymentAttemptInput{
-		OrderID:  "order_failed_123",
-		Amount:   2500,
-		Currency: "GBP",
+		OrderID:   "order_failed_123",
+		Amount:    2500,
+		Currency:  "GBP",
+		ReturnURL: "https://example.com/return",
 	})
 	require.NoError(t, err)
 
@@ -228,6 +231,7 @@ func TestService_ReconcilePaymentAttempt_UpdatesStatusFromProvider(t *testing.T)
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_123",
 		"order_123",
+		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "GBP"},
 		now,
 	)
@@ -305,6 +309,7 @@ func TestService_ReconcilePaymentAttempt_RequiresProviderLink(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_123",
 		"order_123",
+		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "GBP"},
 		now,
 	)
