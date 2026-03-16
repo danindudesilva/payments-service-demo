@@ -15,6 +15,13 @@ CREATE TABLE IF NOT EXISTS payment_attempts (
     completed_at TIMESTAMPTZ NULL
 );
 
+CREATE TABLE IF NOT EXISTS processed_webhook_events (
+    event_id TEXT PRIMARY KEY,
+    provider_name TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    processed_at TIMESTAMPTZ NOT NULL
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS payment_attempts_idempotency_key_uidx
     ON payment_attempts (idempotency_key);
 
@@ -27,3 +34,9 @@ CREATE INDEX IF NOT EXISTS payment_attempts_order_id_idx
 
 CREATE INDEX IF NOT EXISTS payment_attempts_status_idx
     ON payment_attempts (status);
+
+CREATE INDEX IF NOT EXISTS processed_webhook_events_provider_name_idx
+    ON processed_webhook_events (provider_name);
+
+CREATE INDEX IF NOT EXISTS processed_webhook_events_processed_at_idx
+    ON processed_webhook_events (processed_at);
