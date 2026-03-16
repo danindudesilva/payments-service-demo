@@ -2,19 +2,17 @@ package postgres
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/danindudesilva/payments-service/internal/payments/domain"
-	"github.com/danindudesilva/payments-service/internal/platform/database"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/danindudesilva/payments-service/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRepository_SaveAndGetByID(t *testing.T) {
-	pool := newTestPool(t)
+	pool := testutil.NewTestPool(t)
 	repo := NewRepository(pool)
 
 	attempt := mustNewAttempt(t)
@@ -33,7 +31,7 @@ func TestRepository_SaveAndGetByID(t *testing.T) {
 }
 
 func TestRepository_SaveAndGetByProviderPaymentID(t *testing.T) {
-	pool := newTestPool(t)
+	pool := testutil.NewTestPool(t)
 	repo := NewRepository(pool)
 
 	attempt := mustNewAttempt(t)
@@ -53,7 +51,7 @@ func TestRepository_SaveAndGetByProviderPaymentID(t *testing.T) {
 }
 
 func TestRepository_GetByID_NotFound(t *testing.T) {
-	pool := newTestPool(t)
+	pool := testutil.NewTestPool(t)
 	repo := NewRepository(pool)
 
 	_, err := repo.GetByID(context.Background(), "missing")
@@ -61,7 +59,7 @@ func TestRepository_GetByID_NotFound(t *testing.T) {
 }
 
 func TestRepository_GetByProviderPaymentID_NotFound(t *testing.T) {
-	pool := newTestPool(t)
+	pool := testutil.NewTestPool(t)
 	repo := NewRepository(pool)
 
 	_, err := repo.GetByProviderPaymentID(context.Background(), "missing")
@@ -69,7 +67,7 @@ func TestRepository_GetByProviderPaymentID_NotFound(t *testing.T) {
 }
 
 func TestRepository_SaveUpdatesExistingAttempt(t *testing.T) {
-	pool := newTestPool(t)
+	pool := testutil.NewTestPool(t)
 	repo := NewRepository(pool)
 
 	attempt := mustNewAttempt(t)
@@ -89,25 +87,102 @@ func TestRepository_SaveUpdatesExistingAttempt(t *testing.T) {
 	require.NotNil(t, got.Timestamps.CompletedAt)
 }
 
-func newTestPool(t *testing.T) *pgxpool.Pool {
-	t.Helper()
+func TestRepository_SaveAndGetByID_PreservesReturnURL(t *testing.T) {
+	pool := testutil.NewTestPool(t)
+	repo := NewRepository(pool)
 
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		databaseURL = "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable"
-	}
-
-	pool, err := database.NewPool(context.Background(), database.Config{
-		DatabaseURL: databaseURL,
-	})
+	attempt := mustNewAttempt(t)
+	err := repo.Save(context.Background(), attempt)
 	require.NoError(t, err)
 
-	t.Cleanup(func() {
-		_, _ = pool.Exec(context.Background(), `DELETE FROM payment_attempts`)
-		pool.Close()
-	})
+	got, err := repo.GetByID(context.Background(), attempt.ID)
+	require.NoError(t, err)
 
-	return pool
+	assert.Equal(t, "https://example.com/return", got.ReturnURL)
+}
+
+func TestRepository_SaveAndGetByID_PreservesFailureReason(t *testing.T) {
+	pool := testutil.NewTestPool(t)
+	repo := NewRepository(pool)
+
+	attempt := mustNewAttempt(t)
+	err := attempt.MarkFailed(domain.FailureReasonUnknown, time.Now())
+	require.NoError(t, err)
+
+	err = repo.Save(context.Background(), attempt)
+	require.NoError(t, err)
+
+	got, err := repo.GetByID(context.Background(), attempt.ID)
+	require.NoError(t, err)
+
+	assert.Equal(t, domain.PaymentStatusFailed, got.Status)
+	assert.Equal(t, domain.FailureReasonUnknown, got.FailureReason)
+	require.NotNil(t, got.Timestamps.CompletedAt)
+}
+
+func TestRepository_SaveAndGetByID_PreservesCompletedAt(t *testing.T) {
+	pool := testutil.NewTestPool(t)
+	repo := NewRepository(pool)
+
+	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
+	attempt, err := domain.NewPaymentAttempt(
+		"attempt_completed",
+		"order_completed",
+		"https://example.com/return",
+		domain.Money{Amount: 2500, Currency: "GBP"},
+		now,
+	)
+	require.NoError(t, err)
+
+	err = attempt.MarkSucceeded(now.Add(time.Minute))
+	require.NoError(t, err)
+
+	err = repo.Save(context.Background(), attempt)
+	require.NoError(t, err)
+
+	got, err := repo.GetByID(context.Background(), "attempt_completed")
+	require.NoError(t, err)
+
+	require.NotNil(t, got.Timestamps.CompletedAt)
+	assert.Equal(t, now.Add(time.Minute).Local(), *got.Timestamps.CompletedAt)
+}
+
+func TestRepository_SaveAndGetByID_PreservesClientSecret(t *testing.T) {
+	pool := testutil.NewTestPool(t)
+	repo := NewRepository(pool)
+
+	attempt := mustNewAttempt(t)
+	err := attempt.LinkProvider("stripe", "pi_secret", "secret_123", time.Now())
+	require.NoError(t, err)
+
+	err = repo.Save(context.Background(), attempt)
+	require.NoError(t, err)
+
+	got, err := repo.GetByID(context.Background(), attempt.ID)
+	require.NoError(t, err)
+
+	assert.Equal(t, "secret_123", got.Provider.ClientSecret)
+}
+
+func TestRepository_GetByProviderPaymentID_PreservesReturnURLAndStatus(t *testing.T) {
+	pool := testutil.NewTestPool(t)
+	repo := NewRepository(pool)
+
+	attempt := mustNewAttempt(t)
+	err := attempt.LinkProvider("stripe", "pi_lookup", "secret_lookup", time.Now())
+	require.NoError(t, err)
+
+	err = attempt.MarkProcessing(time.Now())
+	require.NoError(t, err)
+
+	err = repo.Save(context.Background(), attempt)
+	require.NoError(t, err)
+
+	got, err := repo.GetByProviderPaymentID(context.Background(), "pi_lookup")
+	require.NoError(t, err)
+
+	assert.Equal(t, "https://example.com/return", got.ReturnURL)
+	assert.Equal(t, domain.PaymentStatusProcessing, got.Status)
 }
 
 func mustNewAttempt(t *testing.T) *domain.PaymentAttempt {
