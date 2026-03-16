@@ -34,6 +34,12 @@ type CreatePaymentAttemptOutput struct {
 	Attempt *domain.PaymentAttempt
 }
 
+type ProviderPaymentUpdate struct {
+	ProviderPaymentID string
+	Status            domain.PaymentStatus
+	FailureReason     string
+}
+
 func New(
 	repo domain.PaymentAttemptRepository,
 	gateway domain.PaymentGateway,
@@ -164,6 +170,53 @@ func (s *Service) ReconcilePaymentAttempt(ctx context.Context, attemptID string)
 
 	if err := s.repo.Save(ctx, attempt); err != nil {
 		return nil, fmt.Errorf("save reconciled payment attempt: %w", err)
+	}
+
+	return attempt, nil
+}
+
+func (s *Service) ApplyProviderPaymentUpdate(
+	ctx context.Context,
+	update ProviderPaymentUpdate,
+) (*domain.PaymentAttempt, error) {
+	attempt, err := s.repo.GetByProviderPaymentID(ctx, update.ProviderPaymentID)
+	if err != nil {
+		return nil, fmt.Errorf("get payment attempt by provider payment id: %w", err)
+	}
+
+	now := s.now()
+
+	switch update.Status {
+	case domain.PaymentStatusPending:
+		// no-op for now
+	case domain.PaymentStatusRequiresAction:
+		// not using webhook-driven next_action data yet.
+	case domain.PaymentStatusProcessing:
+		if err := attempt.MarkProcessing(now); err != nil {
+			return nil, fmt.Errorf("mark payment attempt processing: %w", err)
+		}
+
+	case domain.PaymentStatusSucceeded:
+		if err := attempt.MarkSucceeded(now); err != nil {
+			return nil, fmt.Errorf("mark payment attempt succeeded: %w", err)
+		}
+
+	case domain.PaymentStatusFailed:
+		if err := attempt.MarkFailed(update.FailureReason, now); err != nil {
+			return nil, fmt.Errorf("mark payment attempt failed: %w", err)
+		}
+
+	case domain.PaymentStatusCancelled:
+		if err := attempt.MarkCancelled(now); err != nil {
+			return nil, fmt.Errorf("mark payment attempt cancelled: %w", err)
+		}
+
+	default:
+		return nil, fmt.Errorf("unsupported provider payment status: %s", update.Status)
+	}
+
+	if err := s.repo.Save(ctx, attempt); err != nil {
+		return nil, fmt.Errorf("save updated payment attempt: %w", err)
 	}
 
 	return attempt, nil
