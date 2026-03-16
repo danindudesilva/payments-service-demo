@@ -39,7 +39,11 @@ func New(cfg config.Config) (*App, error) {
 
 	repo := memoryrepo.NewRepository()
 
-	paymentGateway, err := gateway.New(cfg)
+	paymentGateway, err := gateway.New(gateway.Config{
+		PaymentsProvider:     cfg.PaymentsProvider,
+		StripeSecretKey:      cfg.StripeSecretKey,
+		StripePublishableKey: cfg.StripePublishableKey,
+	})
 	if err != nil {
 		dbPool.Close()
 		return nil, fmt.Errorf("create payment gateway: %w", err)

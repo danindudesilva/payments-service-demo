@@ -3,14 +3,13 @@ package gateway
 import (
 	"testing"
 
-	"github.com/danindudesilva/payments-service/internal/config"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNew_FakeProvider(t *testing.T) {
 	t.Parallel()
 
-	gateway, err := New(config.Config{
+	gateway, err := New(Config{
 		PaymentsProvider: "fake",
 	})
 	require.NoError(t, err)
@@ -20,7 +19,7 @@ func TestNew_FakeProvider(t *testing.T) {
 func TestNew_StripeProvider_RequiresSecretKey(t *testing.T) {
 	t.Parallel()
 
-	gateway, err := New(config.Config{
+	gateway, err := New(Config{
 		PaymentsProvider: "stripe",
 		StripeSecretKey:  "",
 	})
@@ -32,7 +31,7 @@ func TestNew_StripeProvider_RequiresSecretKey(t *testing.T) {
 func TestNew_StripeProvider_SucceedsWithKey(t *testing.T) {
 	t.Parallel()
 
-	gateway, err := New(config.Config{
+	gateway, err := New(Config{
 		PaymentsProvider: "stripe",
 		StripeSecretKey:  "sk_test_51TApvV",
 	})
@@ -43,7 +42,7 @@ func TestNew_StripeProvider_SucceedsWithKey(t *testing.T) {
 func TestNew_UnsupportedProvider(t *testing.T) {
 	t.Parallel()
 
-	gateway, err := New(config.Config{
+	gateway, err := New(Config{
 		PaymentsProvider: "unknown",
 	})
 	require.Error(t, err)
