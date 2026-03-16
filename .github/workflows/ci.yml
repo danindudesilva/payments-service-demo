@@ -1,12 +1,37 @@
 name: ci
 
 on:
-  push:
   pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: payments_service
+          POSTGRES_USER: payments_service
+          POSTGRES_PASSWORD: payments_service
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U payments_service -d payments_service"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -16,10 +41,21 @@ jobs:
         with:
           go-version: '1.23.2'
 
-      - name: Run Tests
-        run: go test ./...
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U payments_service -d payments_service && exit 0
+            sleep 2
+          done
+          echo "Postgres did not become ready in time"
+          exit 1
 
-      - name: Run coverage
+      - name: Apply schema
+        run: psql "$DATABASE_URL" -f db/schema.sql
+        env:
+          PGPASSWORD: payments_service
+
+      - name: Test with coverage
         run: |
           go test ./... -coverprofile=coverage.out -covermode=count
           go tool cover -func=coverage.out
@@ -28,4 +64,4 @@ jobs:
         run: |
           total=$(go tool cover -func=coverage.out | awk '/total:/ {print substr($3, 1, length($3)-1)}')
           echo "Total coverage: $total%"
-          awk -v total="$total" 'BEGIN { if (total+0 < 70) exit 1 }'
+          awk -v total="$total" 'BEGIN { if (total+0 < 80) exit 1 }'
