@@ -58,12 +58,12 @@ Environment variables:
 curl -i \
   -X POST http://localhost:8080/payment-attempts \
   -H "Content-Type: application/json" \
+  -H "Idempotency-Key: idempotency-key-123" \
   -d '{
     "order_id": "order_123",
     "amount": 2500,
     "currency": "gbp",
     "return_url": "https://example.com/return",
-    "idempotency_key": "idempotency-key-123",
     "description": "test payment"
   }'
 ```
