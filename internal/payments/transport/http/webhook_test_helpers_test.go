@@ -19,7 +19,38 @@ import (
 
 const testWebhookSecret = "whsec_test_secret"
 
-func newWebhookTestHandler(repo domain.PaymentAttemptRepository, t time.Time) *WebhookHandler {
+type fakeProcessedWebhookEventRepo struct {
+	processed map[string]bool
+	saveCalls int
+}
+
+func newFakeProcessedWebhookEventRepo() *fakeProcessedWebhookEventRepo {
+	return &fakeProcessedWebhookEventRepo{
+		processed: make(map[string]bool),
+	}
+}
+
+func (r *fakeProcessedWebhookEventRepo) SaveProcessedEvent(ctx context.Context, providerName, eventID, eventType string) error {
+	key := fmt.Sprintf("%s:%s", providerName, eventID)
+	r.processed[key] = true
+	r.saveCalls++
+	return nil
+}
+
+func (r *fakeProcessedWebhookEventRepo) HasProcessedEvent(ctx context.Context, providerName, eventID string) (bool, error) {
+	key := fmt.Sprintf("%s:%s", providerName, eventID)
+	return r.processed[key], nil
+}
+
+func newWebhookTestHandler(repo domain.PaymentAttemptRepository, now time.Time) *WebhookHandler {
+	return newWebhookTestHandlerWithProcessedRepo(repo, now, newFakeProcessedWebhookEventRepo())
+}
+
+func newWebhookTestHandlerWithProcessedRepo(
+	repo domain.PaymentAttemptRepository,
+	now time.Time,
+	processedRepo domain.ProcessedWebhookEventRepository,
+) *WebhookHandler {
 	svc := paymentservice.New(
 		repo,
 		&fakeGateway{
@@ -42,16 +73,17 @@ func newWebhookTestHandler(repo domain.PaymentAttemptRepository, t time.Time) *W
 				return domain.CreateProviderPaymentResult{}, nil
 			},
 		},
-		func() time.Time { return t },
+		func() time.Time { return now },
 		func() string { return "unused" },
 	)
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return NewWebhookHandler(logger, testWebhookSecret, svc)
+	return NewWebhookHandler(logger, testWebhookSecret, svc, processedRepo)
 }
 
 func newWebhookTestHandlerWithDefaults() *WebhookHandler {
 	repo := memoryrepo.NewRepository()
+	processedRepo := newFakeProcessedWebhookEventRepo()
 	svc := paymentservice.New(
 		repo,
 		&fakeGateway{
@@ -79,7 +111,7 @@ func newWebhookTestHandlerWithDefaults() *WebhookHandler {
 	)
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return NewWebhookHandler(logger, testWebhookSecret, svc)
+	return NewWebhookHandler(logger, testWebhookSecret, svc, processedRepo)
 }
 
 func newSignedWebhookRequest(eventType string, dataObject string) *http.Request {
