@@ -87,8 +87,15 @@ func (h *Handler) handlePaymentAttemptRoutes(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *Handler) createPaymentAttempt(w http.ResponseWriter, r *http.Request) {
-	var request createPaymentAttemptRequest
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		basehttp.WriteJSON(w, http.StatusBadRequest, basehttp.ErrorResponse{
+			Error: "Idempotency-Key header is required",
+		})
+		return
+	}
 
+	var request createPaymentAttemptRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		basehttp.WriteJSON(w, http.StatusBadRequest, basehttp.ErrorResponse{
 			Error: "invalid json body",
@@ -104,11 +111,12 @@ func (h *Handler) createPaymentAttempt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.service.CreatePaymentAttempt(r.Context(), service.CreatePaymentAttemptInput{
-		OrderID:     request.OrderID,
-		Amount:      request.Amount,
-		Currency:    request.Currency,
-		ReturnURL:   request.ReturnURL,
-		Description: request.Description,
+		OrderID:        request.OrderID,
+		IdempotencyKey: idempotencyKey,
+		Amount:         request.Amount,
+		Currency:       request.Currency,
+		ReturnURL:      request.ReturnURL,
+		Description:    request.Description,
 	})
 	if err != nil {
 		h.logger.Error("create payment attempt failed",

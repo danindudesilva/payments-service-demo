@@ -40,6 +40,7 @@ func (r *Repository) Save(ctx context.Context, attempt *domain.PaymentAttempt) e
 		)
 		ON CONFLICT (id) DO UPDATE SET
 			order_id = EXCLUDED.order_id,
+			idempotency_key = EXCLUDED.idempotency_key,
 			provider_name = EXCLUDED.provider_name,
 			provider_payment_id = EXCLUDED.provider_payment_id,
 			status = EXCLUDED.status,
@@ -57,7 +58,7 @@ func (r *Repository) Save(ctx context.Context, attempt *domain.PaymentAttempt) e
 		query,
 		attempt.ID,
 		attempt.OrderID,
-		attempt.ID, // temporary placeholder until idempotency is handles
+		attempt.IdempotencyKey,
 		attempt.Provider.ProviderName,
 		nullIfEmpty(attempt.Provider.ProviderPaymentID),
 		string(attempt.Status),
@@ -82,6 +83,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*domain.PaymentAtt
 		SELECT
 			id,
 			order_id,
+			idempotency_key,
 			return_url,
 			status,
 			amount,
@@ -99,12 +101,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*domain.PaymentAtt
 			id = $1
 		`
 
-	attempt, err := scanAttempt(r.pool.QueryRow(ctx, query, id))
-	if err != nil {
-		return nil, err
-	}
-
-	return attempt, nil
+	return scanAttempt(r.pool.QueryRow(ctx, query, id))
 }
 
 func (r *Repository) GetByProviderPaymentID(ctx context.Context, providerPaymentID string) (*domain.PaymentAttempt, error) {
@@ -112,6 +109,7 @@ func (r *Repository) GetByProviderPaymentID(ctx context.Context, providerPayment
 		SELECT
 			id,
 			order_id,
+			idempotency_key,
 			return_url,
 			status,
 			amount,
@@ -129,10 +127,31 @@ func (r *Repository) GetByProviderPaymentID(ctx context.Context, providerPayment
 			provider_payment_id = $1
 		`
 
-	attempt, err := scanAttempt(r.pool.QueryRow(ctx, query, providerPaymentID))
-	if err != nil {
-		return nil, err
-	}
+	return scanAttempt(r.pool.QueryRow(ctx, query, providerPaymentID))
+}
 
-	return attempt, nil
+func (r *Repository) GetByIdempotencyKey(ctx context.Context, idempotencyKey string) (*domain.PaymentAttempt, error) {
+	const query = `
+		SELECT
+			id,
+			order_id,
+			idempotency_key,
+			return_url,
+			status,
+			amount,
+			currency,
+			provider_name,
+			provider_payment_id,
+			client_secret,
+			failure_reason,
+			created_at,
+			updated_at,
+			completed_at
+		FROM
+			payment_attempts
+		WHERE
+			idempotency_key = $1
+		`
+
+	return scanAttempt(r.pool.QueryRow(ctx, query, idempotencyKey))
 }

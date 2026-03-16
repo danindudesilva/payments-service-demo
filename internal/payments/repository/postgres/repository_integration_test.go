@@ -128,6 +128,7 @@ func TestRepository_SaveAndGetByID_PreservesCompletedAt(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_completed",
 		"order_completed",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "GBP"},
 		now,
@@ -185,6 +186,21 @@ func TestRepository_GetByProviderPaymentID_PreservesReturnURLAndStatus(t *testin
 	assert.Equal(t, domain.PaymentStatusProcessing, got.Status)
 }
 
+func TestRepository_GetByIdempotencyKey(t *testing.T) {
+	pool := testutil.NewTestPool(t)
+	repo := NewRepository(pool)
+
+	attempt := mustNewAttempt(t)
+	err := repo.Save(context.Background(), attempt)
+	require.NoError(t, err)
+
+	got, err := repo.GetByIdempotencyKey(context.Background(), attempt.IdempotencyKey)
+	require.NoError(t, err)
+
+	assert.Equal(t, attempt.ID, got.ID)
+	assert.Equal(t, attempt.IdempotencyKey, got.IdempotencyKey)
+}
+
 func mustNewAttempt(t *testing.T) *domain.PaymentAttempt {
 	t.Helper()
 
@@ -192,6 +208,7 @@ func mustNewAttempt(t *testing.T) *domain.PaymentAttempt {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_123",
 		"order_123",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "GBP"},
 		now,

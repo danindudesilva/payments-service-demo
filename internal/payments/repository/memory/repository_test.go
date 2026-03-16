@@ -117,6 +117,7 @@ func TestRepository_SaveAndGetTerminalAttemptPreservesCompletedAt(t *testing.T) 
 	attempt, err := domain.NewPaymentAttempt(
 		"pa_123",
 		"order_123",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "GBP"},
 		now,
@@ -143,6 +144,7 @@ func mustAttempt(t *testing.T) *domain.PaymentAttempt {
 	attempt, err := domain.NewPaymentAttempt(
 		"pa_123",
 		"order_123",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "gbp"},
 		now,

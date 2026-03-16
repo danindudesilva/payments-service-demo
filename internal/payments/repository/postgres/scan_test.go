@@ -60,6 +60,7 @@ func TestScanAttempt(t *testing.T) {
 		values: []any{
 			"attempt_123",
 			"order_123",
+			"idempotency-key-123",
 			"https://example.com/return",
 			"failed",
 			int64(2500),

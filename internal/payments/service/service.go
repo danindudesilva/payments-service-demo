@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -20,11 +21,12 @@ type Service struct {
 }
 
 type CreatePaymentAttemptInput struct {
-	OrderID     string
-	Amount      int64
-	Currency    string
-	ReturnURL   string
-	Description string
+	OrderID        string
+	IdempotencyKey string
+	Amount         int64
+	Currency       string
+	ReturnURL      string
+	Description    string
 }
 
 type CreatePaymentAttemptOutput struct {
@@ -53,6 +55,14 @@ func (s *Service) CreatePaymentAttempt(
 	ctx context.Context,
 	input CreatePaymentAttemptInput,
 ) (*CreatePaymentAttemptOutput, error) {
+	if existing, err := s.repo.GetByIdempotencyKey(ctx, input.IdempotencyKey); err == nil {
+		return &CreatePaymentAttemptOutput{
+			Attempt: existing,
+		}, nil
+	} else if !errors.Is(err, domain.ErrPaymentNotFound) {
+		return nil, fmt.Errorf("get payment attempt by idempotency key: %w", err)
+	}
+
 	if s.generateID == nil {
 		return nil, fmt.Errorf("id generator must not be nil")
 	}
@@ -63,6 +73,7 @@ func (s *Service) CreatePaymentAttempt(
 	attempt, err := domain.NewPaymentAttempt(
 		attemptID,
 		input.OrderID,
+		input.IdempotencyKey,
 		input.ReturnURL,
 		domain.Money{
 			Amount:   input.Amount,

@@ -17,6 +17,7 @@ func scanAttempt(row rowScanner) (*domain.PaymentAttempt, error) {
 	var (
 		id                string
 		orderID           string
+		idempotencyKey    string
 		returnURL         string
 		status            string
 		amount            int64
@@ -33,6 +34,7 @@ func scanAttempt(row rowScanner) (*domain.PaymentAttempt, error) {
 	err := row.Scan(
 		&id,
 		&orderID,
+		&idempotencyKey,
 		&returnURL,
 		&status,
 		&amount,
@@ -55,6 +57,7 @@ func scanAttempt(row rowScanner) (*domain.PaymentAttempt, error) {
 	attempt, err := domain.NewPaymentAttempt(
 		id,
 		orderID,
+		idempotencyKey,
 		returnURL,
 		domain.Money{
 			Amount:   amount,

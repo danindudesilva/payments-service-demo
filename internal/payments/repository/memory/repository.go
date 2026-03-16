@@ -8,15 +8,17 @@ import (
 )
 
 type Repository struct {
-	mu                  sync.RWMutex
-	attemptsByID        map[string]*domain.PaymentAttempt
-	attemptIDByProvider map[string]string
+	mu                        sync.RWMutex
+	attemptsByID              map[string]*domain.PaymentAttempt
+	attemptIDByProvider       map[string]string
+	attemptIDByIdempotencyKey map[string]string
 }
 
 func NewRepository() *Repository {
 	return &Repository{
-		attemptsByID:        make(map[string]*domain.PaymentAttempt),
-		attemptIDByProvider: make(map[string]string),
+		attemptsByID:              make(map[string]*domain.PaymentAttempt),
+		attemptIDByProvider:       make(map[string]string),
+		attemptIDByIdempotencyKey: make(map[string]string),
 	}
 }
 
@@ -26,6 +28,9 @@ func (r *Repository) Save(_ context.Context, attempt *domain.PaymentAttempt) err
 
 	cloned := cloneAttempt(attempt)
 	r.attemptsByID[attempt.ID] = cloned
+	if attempt.IdempotencyKey != "" {
+		r.attemptIDByIdempotencyKey[attempt.IdempotencyKey] = attempt.ID
+	}
 
 	if attempt.Provider.ProviderPaymentID != "" {
 		r.attemptIDByProvider[attempt.Provider.ProviderPaymentID] = attempt.ID
@@ -51,6 +56,23 @@ func (r *Repository) GetByProviderPaymentID(_ context.Context, providerPaymentID
 	defer r.mu.RUnlock()
 
 	attemptID, ok := r.attemptIDByProvider[providerPaymentID]
+	if !ok {
+		return nil, domain.ErrPaymentNotFound
+	}
+
+	attempt, ok := r.attemptsByID[attemptID]
+	if !ok {
+		return nil, domain.ErrPaymentNotFound
+	}
+
+	return cloneAttempt(attempt), nil
+}
+
+func (r *Repository) GetByIdempotencyKey(_ context.Context, idempotencyKey string) (*domain.PaymentAttempt, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	attemptID, ok := r.attemptIDByIdempotencyKey[idempotencyKey]
 	if !ok {
 		return nil, domain.ErrPaymentNotFound
 	}

@@ -43,6 +43,7 @@ func TestCreatePaymentAttemptRoutes(t *testing.T) {
 		"description":"test payment"
 	}`))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idempotency-key-123")
 
 	res := httptest.NewRecorder()
 
@@ -61,12 +62,35 @@ func TestCreatePaymentAttemptRoutes_InvalidJSON(t *testing.T) {
 	handler := newTestHandler(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/payment-attempts", bytes.NewBufferString(`{`))
+	req.Header.Set("Idempotency-Key", "idempotency-key-123")
 	res := httptest.NewRecorder()
 
 	handler.handlePaymentAttempts(res, req)
 
 	require.Equal(t, http.StatusBadRequest, res.Code)
 	assert.Contains(t, res.Body.String(), "invalid json body")
+}
+
+func TestCreatePaymentAttempt_MissingIdempotencyKeyHeader(t *testing.T) {
+	t.Parallel()
+
+	handler := newTestHandler(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/payment-attempts", bytes.NewBufferString(`{
+		"order_id":"order_123",
+		"amount":2500,
+		"currency":"gbp",
+		"return_url":"https://example.com/return",
+		"description":"test payment"
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	res := httptest.NewRecorder()
+
+	handler.handlePaymentAttempts(res, req)
+
+	require.Equal(t, http.StatusBadRequest, res.Code)
+	assert.Contains(t, res.Body.String(), "Idempotency-Key header is required")
 }
 
 func TestGetPaymentAttemptRoutes(t *testing.T) {
@@ -78,6 +102,7 @@ func TestGetPaymentAttemptRoutes(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_existing",
 		"order_existing",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 4200, Currency: "GBP"},
 		now,
@@ -181,6 +206,7 @@ func TestCreatePaymentAttemptRoutes_UnknownErrorReturnsSafeMessage(t *testing.T)
 		"description":"test payment"
 	}`))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idempotency-key-123")
 
 	res := httptest.NewRecorder()
 
@@ -200,6 +226,7 @@ func TestReconcilePaymentAttempt(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_existing",
 		"order_existing",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 4200, Currency: "GBP"},
 		now,
@@ -284,6 +311,7 @@ func TestCreatePaymentAttempt_InvalidReturnURL(t *testing.T) {
 		"description":"test payment"
 	}`))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idempotency-key-123")
 
 	res := httptest.NewRecorder()
 
@@ -302,6 +330,7 @@ func TestHandlePaymentAttemptRoutes_GetByID(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_existing",
 		"order_existing",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 4200, Currency: "GBP"},
 		now,
@@ -330,6 +359,7 @@ func TestHandlePaymentAttemptRoutes_Reconcile(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_existing",
 		"order_existing",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 4200, Currency: "GBP"},
 		now,
@@ -415,6 +445,7 @@ func TestCreatePaymentAttempt_MissingReturnURL(t *testing.T) {
 		"description":"test payment"
 	}`))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idempotency-key-123")
 
 	res := httptest.NewRecorder()
 

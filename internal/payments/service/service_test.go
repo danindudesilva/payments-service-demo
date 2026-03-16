@@ -49,11 +49,12 @@ func TestService_CreatePaymentAttempt_RequiresAction(t *testing.T) {
 	)
 
 	result, err := svc.CreatePaymentAttempt(context.Background(), CreatePaymentAttemptInput{
-		OrderID:     "order_123",
-		Amount:      2500,
-		Currency:    "gbp",
-		ReturnURL:   "https://example.com/return",
-		Description: "Test payment",
+		OrderID:        "order_123",
+		IdempotencyKey: "idempotency-key-123",
+		Amount:         2500,
+		Currency:       "gbp",
+		ReturnURL:      "https://example.com/return",
+		Description:    "Test payment",
 	})
 	require.NoError(t, err)
 
@@ -98,10 +99,11 @@ func TestService_CreatePaymentAttempt_Succeeded(t *testing.T) {
 	)
 
 	result, err := svc.CreatePaymentAttempt(context.Background(), CreatePaymentAttemptInput{
-		OrderID:   "order_456",
-		Amount:    5000,
-		Currency:  "GBP",
-		ReturnURL: "https://example.com/return",
+		OrderID:        "order_456",
+		IdempotencyKey: "idempotency-key-123",
+		Amount:         5000,
+		Currency:       "GBP",
+		ReturnURL:      "https://example.com/return",
 	})
 	require.NoError(t, err)
 
@@ -132,15 +134,63 @@ func TestService_CreatePaymentAttempt_GatewayError(t *testing.T) {
 	)
 
 	result, err := svc.CreatePaymentAttempt(context.Background(), CreatePaymentAttemptInput{
-		OrderID:  "order_789",
-		Amount:   3000,
-		Currency: "GBP",
+		OrderID:        "order_789",
+		IdempotencyKey: "idempotency-key-123",
+		Amount:         3000,
+		Currency:       "GBP",
 	})
 	require.Error(t, err)
 	assert.Nil(t, result)
 
 	_, getErr := repo.GetByID(context.Background(), "attempt_789")
 	require.ErrorIs(t, getErr, domain.ErrPaymentNotFound)
+}
+
+func TestService_CreatePaymentAttempt_IsIdempotent(t *testing.T) {
+	repo := memoryrepo.NewRepository()
+	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
+
+	createCalls := 0
+	gateway := &fakeGateway{
+		createPaymentFunc: func(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
+			createCalls++
+			return domain.CreateProviderPaymentResult{
+				ProviderName:      "stripe",
+				ProviderPaymentID: "pi_123",
+				ClientSecret:      "secret_123",
+				Status:            domain.PaymentStatusPending,
+			}, nil
+		},
+		getPaymentFunc: func(ctx context.Context, providerPaymentID string) (domain.CreateProviderPaymentResult, error) {
+			return domain.CreateProviderPaymentResult{}, nil
+		},
+	}
+
+	svc := New(
+		repo,
+		gateway,
+		func() time.Time { return now },
+		func() string { return "attempt_123" },
+	)
+
+	input := CreatePaymentAttemptInput{
+		OrderID:        "order_123",
+		IdempotencyKey: "idem_123",
+		Amount:         2500,
+		Currency:       "GBP",
+		ReturnURL:      "https://example.com/return",
+		Description:    "test payment",
+	}
+
+	first, err := svc.CreatePaymentAttempt(context.Background(), input)
+	require.NoError(t, err)
+
+	second, err := svc.CreatePaymentAttempt(context.Background(), input)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, createCalls)
+	assert.Equal(t, first.Attempt.ID, second.Attempt.ID)
+	assert.Equal(t, "idem_123", second.Attempt.IdempotencyKey)
 }
 
 func TestService_GetPaymentAttempt(t *testing.T) {
@@ -152,6 +202,7 @@ func TestService_GetPaymentAttempt(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_001",
 		"order_001",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 1200, Currency: "GBP"},
 		now,
@@ -209,10 +260,11 @@ func TestService_CreatePaymentAttempt_FailedUsesProviderFailureReasonConstant(t 
 	)
 
 	result, err := svc.CreatePaymentAttempt(context.Background(), CreatePaymentAttemptInput{
-		OrderID:   "order_failed_123",
-		Amount:    2500,
-		Currency:  "GBP",
-		ReturnURL: "https://example.com/return",
+		OrderID:        "order_failed_123",
+		IdempotencyKey: "idempotency-key-123",
+		Amount:         2500,
+		Currency:       "GBP",
+		ReturnURL:      "https://example.com/return",
 	})
 	require.NoError(t, err)
 
@@ -231,6 +283,7 @@ func TestService_ReconcilePaymentAttempt_UpdatesStatusFromProvider(t *testing.T)
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_123",
 		"order_123",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "GBP"},
 		now,
@@ -309,6 +362,7 @@ func TestService_ReconcilePaymentAttempt_RequiresProviderLink(t *testing.T) {
 	attempt, err := domain.NewPaymentAttempt(
 		"attempt_123",
 		"order_123",
+		"idempotency-key-123",
 		"https://example.com/return",
 		domain.Money{Amount: 2500, Currency: "GBP"},
 		now,

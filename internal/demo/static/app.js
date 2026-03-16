@@ -126,6 +126,7 @@
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Idempotency-Key": `demo-${orderId}`,
       },
       body: JSON.stringify({
         order_id: orderId,
