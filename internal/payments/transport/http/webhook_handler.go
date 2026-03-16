@@ -176,6 +176,12 @@ func (h *WebhookHandler) applyPaymentIntentEvent(
 		return err
 	}
 
+	h.logger.Info("applying stripe payment intent webhook update",
+		slog.String("request_id", basehttp.RequestIDFromContext(r.Context())),
+		slog.String("event_id", event.ID),
+		slog.String("provider_payment_id", intent.ID),
+		slog.String("status", string(status)),
+	)
 	_, err := h.service.ApplyProviderPaymentUpdate(r.Context(), service.ProviderPaymentUpdate{
 		ProviderPaymentID: intent.ID,
 		Status:            status,
