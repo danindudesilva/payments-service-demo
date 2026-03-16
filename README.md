@@ -41,6 +41,8 @@ Environment variables:
 - `HTTP_PORT` - HTTP port, defaults to `8080`
 - `PAYMENTS_PROVIDER` - payment gateway provider, defaults to `fake`
 - `STRIPE_SECRET_KEY` - Stripe secret key, used when `PAYMENTS_PROVIDER=stripe`
+- `STRIPE_PUBLISHABLE_KEY` - Stripe publishable key, used when `PAYMENTS_PROVIDER=stripe`
+- `DATABASE_URL` - PostgreSQL connection string, required
 
 ## Available endpoints
 
@@ -93,7 +95,11 @@ user: payments_service
 password: payments_service
 ```
 
-#### Current schema
+Example local DATABASE_URL
+
+```bash
+export DATABASE_URL="postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable"
+```
 
 The initial schema is in:
 ```
