@@ -28,6 +28,9 @@ func (r *Repository) Save(_ context.Context, attempt *domain.PaymentAttempt) err
 
 	cloned := cloneAttempt(attempt)
 	r.attemptsByID[attempt.ID] = cloned
+	if attempt.IdempotencyKey != "" {
+		r.attemptIDByIdempotencyKey[attempt.IdempotencyKey] = attempt.ID
+	}
 
 	if attempt.Provider.ProviderPaymentID != "" {
 		r.attemptIDByProvider[attempt.Provider.ProviderPaymentID] = attempt.ID
@@ -65,7 +68,7 @@ func (r *Repository) GetByProviderPaymentID(_ context.Context, providerPaymentID
 	return cloneAttempt(attempt), nil
 }
 
-func (r *Repository) GetByIdempotencyKey(ctx context.Context, idempotencyKey string) (*domain.PaymentAttempt, error) {
+func (r *Repository) GetByIdempotencyKey(_ context.Context, idempotencyKey string) (*domain.PaymentAttempt, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
