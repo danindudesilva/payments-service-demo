@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 type Config struct {
@@ -11,6 +12,7 @@ type Config struct {
 	PaymentsProvider     string
 	StripeSecretKey      string
 	StripePublishableKey string
+	DatabaseURL          string
 }
 
 func Load() (Config, error) {
@@ -20,21 +22,26 @@ func Load() (Config, error) {
 		PaymentsProvider:     getEnv("PAYMENTS_PROVIDER", "fake"),
 		StripeSecretKey:      getEnv("STRIPE_SECRET_KEY", ""),
 		StripePublishableKey: getEnv("STRIPE_PUBLISHABLE_KEY", ""),
+		DatabaseURL:          getEnv("DATABASE_URL", ""),
 	}
 
-	if cfg.HTTPPort == "" {
+	if strings.TrimSpace(cfg.HTTPPort) == "" {
 		return Config{}, fmt.Errorf("HTTP_PORT must not be empty")
 	}
 
-	if cfg.PaymentsProvider == "" {
+	if strings.TrimSpace(cfg.PaymentsProvider) == "" {
 		return Config{}, fmt.Errorf("PAYMENTS_PROVIDER must not be empty")
 	}
 
+	if strings.TrimSpace(cfg.DatabaseURL) == "" {
+		return Config{}, fmt.Errorf("DATABASE_URL must not be empty")
+	}
+
 	if cfg.PaymentsProvider == "stripe" {
-		if cfg.StripeSecretKey == "" {
+		if strings.TrimSpace(cfg.StripeSecretKey) == "" {
 			return Config{}, fmt.Errorf("STRIPE_SECRET_KEY must not be empty when PAYMENTS_PROVIDER=stripe")
 		}
-		if cfg.StripePublishableKey == "" {
+		if strings.TrimSpace(cfg.StripePublishableKey) == "" {
 			return Config{}, fmt.Errorf("STRIPE_PUBLISHABLE_KEY must not be empty when PAYMENTS_PROVIDER=stripe")
 		}
 	}
