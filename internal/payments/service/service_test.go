@@ -8,8 +8,6 @@ import (
 
 	"github.com/danindudesilva/payments-service/internal/payments/domain"
 	memoryrepo "github.com/danindudesilva/payments-service/internal/payments/repository/memory"
-	"github.com/danindudesilva/payments-service/internal/payments/repository/postgres"
-	"github.com/danindudesilva/payments-service/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -77,8 +75,7 @@ func TestService_CreatePaymentAttempt_Succeeded(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)
-	pool := testutil.NewTestPool(t)
-	repo := postgres.NewRepository(pool)
+	repo := memoryrepo.NewRepository()
 
 	gateway := &fakeGateway{
 		createPaymentFunc: func(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
