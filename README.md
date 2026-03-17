@@ -22,7 +22,7 @@ I'm using Stripe because it offers free test mode, official 3DS test methods, an
 go run ./cmd/api
 ```
 
-Open http://localhost:8080/healthz.
+Open http://localhost:3000/healthz.
 
 ## Enable pre-commit hook
 
@@ -38,7 +38,7 @@ git config core.hooksPath .githooks
 Environment variables:
 
 - `APP_ENV` - application environment, defaults to `development`
-- `HTTP_PORT` - HTTP port, defaults to `8080`
+- `PORT` - HTTP port, defaults to `3000`
 - `PAYMENTS_PROVIDER` - payment gateway provider, defaults to `fake`
 - `STRIPE_SECRET_KEY` - Stripe secret key, used when `PAYMENTS_PROVIDER=stripe`
 - `STRIPE_PUBLISHABLE_KEY` - Stripe publishable key, used when `PAYMENTS_PROVIDER=stripe`
@@ -56,7 +56,7 @@ Environment variables:
 
 ```bash
 curl -i \
-  -X POST http://localhost:8080/payment-attempts \
+  -X POST http://localhost:3000/payment-attempts \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: idempotency-key-123" \
   -d '{
@@ -121,7 +121,7 @@ stripe login
 ```
 Start forwarding Stripe webhook events to your local service:
 ```bash
-stripe listen --forward-to localhost:8080/webhooks/stripe
+stripe listen --forward-to localhost:3000/webhooks/stripe
 ```
 The CLI will print a webhook signing secret. Export it before starting the app:
 ```bash
@@ -181,15 +181,15 @@ docker build -t payments-service:local .
 
 ```bash
 docker run --rm \
-  -p 8080:8080 \
-  -e PORT=8080 \
+  -p 3000:3000 \
+  -e PORT=3000 \
   -e DATABASE_URL="postgres://payments_service:payments_service@host.docker.internal:5432/payments_service?sslmode=disable" \
   payments-service:local
 ```
 
 ### Open:
 
-  http://localhost:8080/healthz
+  http://localhost:3000/healthz
 
-  http://localhost:8080/demo
+  http://localhost:3000/demo
 
