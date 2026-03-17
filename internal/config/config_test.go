@@ -57,6 +57,28 @@ func TestLoad_UsesDefaultPortWhenMissing(t *testing.T) {
 	assert.Equal(t, "3000", cfg.Port)
 }
 
+func TestLoad_UsesAppVersionWhenPresent(t *testing.T) {
+
+	t.Setenv("DATABASE_URL", "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable")
+	t.Setenv("APP_VERSION", "v1.0.0")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	assert.Equal(t, "v1.0.0", cfg.AppVersion)
+}
+
+func TestLoad_UsesDefaultAppVersionWhenMissing(t *testing.T) {
+
+	t.Setenv("DATABASE_URL", "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable")
+	unsetEnv(t, "APP_VERSION")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	assert.Equal(t, "dev", cfg.AppVersion)
+}
+
 func TestLoad_RequiresDatabaseURL(t *testing.T) {
 	unsetEnv(t, "DATABASE_URL")
 
