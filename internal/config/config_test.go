@@ -8,17 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHTTPAddress(t *testing.T) {
-	t.Parallel()
-
-	cfg := Config{HTTPPort: "9999"}
-
-	assert.Equal(t, ":9999", cfg.HTTPAddress())
-}
-
 func TestLoadDefaults(t *testing.T) {
 	unsetEnv(t, "APP_ENV")
-	unsetEnv(t, "HTTP_PORT")
+	unsetEnv(t, "PORT")
 	unsetEnv(t, "PAYMENTS_PROVIDER")
 	unsetEnv(t, "STRIPE_SECRET_KEY")
 	unsetEnv(t, "STRIPE_PUBLISHABLE_KEY")
@@ -29,11 +21,40 @@ func TestLoadDefaults(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "development", cfg.AppEnv)
-	assert.Equal(t, "8080", cfg.HTTPPort)
+	assert.Equal(t, "3000", cfg.Port)
 	assert.Equal(t, "fake", cfg.PaymentsProvider)
 	assert.Equal(t, "", cfg.StripeSecretKey)
 	assert.Equal(t, "", cfg.StripePublishableKey)
 	assert.Equal(t, "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable", cfg.DatabaseURL)
+}
+
+func TestHTTPAddress(t *testing.T) {
+
+	cfg := Config{Port: "3000"}
+
+	assert.Equal(t, ":3000", cfg.HTTPAddress())
+}
+
+func TestLoad_UsesPortEnvWhenPresent(t *testing.T) {
+
+	t.Setenv("DATABASE_URL", "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable")
+	t.Setenv("PORT", "9090")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	assert.Equal(t, "9090", cfg.Port)
+}
+
+func TestLoad_UsesDefaultPortWhenMissing(t *testing.T) {
+
+	t.Setenv("DATABASE_URL", "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable")
+	unsetEnv(t, "PORT")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	assert.Equal(t, "3000", cfg.Port)
 }
 
 func TestLoad_RequiresDatabaseURL(t *testing.T) {
@@ -83,21 +104,6 @@ func TestLoad_StripeProviderWithRequiredKeys(t *testing.T) {
 	assert.Equal(t, "pk_test_123", cfg.StripePublishableKey)
 }
 
-func unsetEnv(t *testing.T, key string) {
-	t.Helper()
-
-	original, existed := os.LookupEnv(key)
-	_ = os.Unsetenv(key)
-
-	t.Cleanup(func() {
-		if existed {
-			_ = os.Setenv(key, original)
-			return
-		}
-		_ = os.Unsetenv(key)
-	})
-}
-
 func TestLoad_StripeProviderRequiresWebhookSecret(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable")
 	t.Setenv("PAYMENTS_PROVIDER", "stripe")
@@ -121,4 +127,19 @@ func TestLoad_StripeProviderWithWebhookSecret(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "whsec_123", cfg.StripeWebhookSecret)
+}
+
+func unsetEnv(t *testing.T, key string) {
+	t.Helper()
+
+	original, existed := os.LookupEnv(key)
+	_ = os.Unsetenv(key)
+
+	t.Cleanup(func() {
+		if existed {
+			_ = os.Setenv(key, original)
+			return
+		}
+		_ = os.Unsetenv(key)
+	})
 }
