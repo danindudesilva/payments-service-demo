@@ -8,7 +8,7 @@ import (
 
 type Config struct {
 	AppEnv               string
-	HTTPPort             string
+	Port                 string
 	PaymentsProvider     string
 	StripeSecretKey      string
 	StripePublishableKey string
@@ -19,7 +19,7 @@ type Config struct {
 func Load() (Config, error) {
 	cfg := Config{
 		AppEnv:               getEnv("APP_ENV", "development"),
-		HTTPPort:             getEnv("HTTP_PORT", "8080"),
+		Port:                 getEnv("PORT", "3000"),
 		PaymentsProvider:     getEnv("PAYMENTS_PROVIDER", "fake"),
 		StripeSecretKey:      getEnv("STRIPE_SECRET_KEY", ""),
 		StripePublishableKey: getEnv("STRIPE_PUBLISHABLE_KEY", ""),
@@ -27,8 +27,8 @@ func Load() (Config, error) {
 		DatabaseURL:          getEnv("DATABASE_URL", ""),
 	}
 
-	if strings.TrimSpace(cfg.HTTPPort) == "" {
-		return Config{}, fmt.Errorf("HTTP_PORT must not be empty")
+	if strings.TrimSpace(cfg.Port) == "" {
+		return Config{}, fmt.Errorf("PORT must not be empty")
 	}
 
 	if strings.TrimSpace(cfg.PaymentsProvider) == "" {
@@ -55,7 +55,7 @@ func Load() (Config, error) {
 }
 
 func (c Config) HTTPAddress() string {
-	return fmt.Sprintf(":%s", c.HTTPPort)
+	return fmt.Sprintf(":%s", c.Port)
 }
 
 func getEnv(key, fallback string) string {

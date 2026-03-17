@@ -1,0 +1,10 @@
+.git
+.github
+.githooks
+bin
+tmp
+temp
+vendor
+deployments/docker-compose.yml
+*.log
+.DS_Store
