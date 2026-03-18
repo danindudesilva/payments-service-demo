@@ -32,7 +32,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -h localhost -p "${TEST_DB_PORT}" -U "${TES_DB_USER}" -d "${TES_DB_NAME}""
+          --health-cmd="pg_isready -h localhost -p "${TEST_DB_PORT}" -U "${TEST_DB_USER}" -d "${TEST_DB_NAME}""
           --health-interval=5s
           --health-timeout=5s
           --health-retries=10
