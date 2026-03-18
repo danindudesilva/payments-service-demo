@@ -71,3 +71,22 @@ If error rates rise under idempotency load, inspect:
 - unique constraint handling
 - Cloud Run concurrency settings
 - request timeouts
+
+### Verifying idempotency after the k6 concurrency test
+
+After running the idempotency test, verify that all concurrent requests with the same `Idempotency-Key` converged to a single payment attempt.
+
+Example query:
+
+```sql
+SELECT id, order_id, idempotency_key, provider_name, provider_payment_id, status
+FROM payment_attempts
+WHERE idempotency_key = 'idem_shared_key';
+```
+Expected result:
+- exactly one row is returned
+
+This confirms that:
+- concurrent duplicate create requests were handled idempotently
+- the database uniqueness constraints were effective
+- the service replayed the existing attempt instead of creating duplicates
