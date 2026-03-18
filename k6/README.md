@@ -10,7 +10,7 @@ then run the service locally with the fake provider. Recommended local test conf
 
 ```bash
 export APP_ENV=development
-export PORT=3000
+export APP_URL=3000
 export DATABASE_URL="postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable"
 export PAYMENTS_PROVIDER=fake
 go run ./cmd/api
@@ -36,8 +36,8 @@ make perf-idempotency
 
 You can also point the same tests at another environment, such as Cloud Run:
 ```
-BASE_URL="https://your-service-url.run.app" make perf-baseline
-BASE_URL="https://your-service-url.run.app" make perf-idempotency
+APP_URL="https://your-service-url.run.app" make perf-baseline
+APP_URL="https://your-service-url.run.app" make perf-idempotency
 ```
 
 ### What these tests cover

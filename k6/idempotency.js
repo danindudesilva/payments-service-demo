@@ -1,7 +1,7 @@
 import http from "k6/http";
 import { check } from "k6";
 
-const BASE_URL = `http://localhost:${__ENV.PORT}` || "http://localhost:3000";
+const BASE_URL = __ENV.APP_URL || "http://localhost:3000";
 const SHARED_ORDER_ID = __ENV.ORDER_ID || "order_idem_shared";
 const SHARED_IDEMPOTENCY_KEY = __ENV.IDEMPOTENCY_KEY || "idem_shared_key";
 const AMOUNT = Number(__ENV.AMOUNT || "3456");
