@@ -219,3 +219,17 @@ See:
 ```
 deploy/github-actions/README.md
 ```
+
+## Performance testing mode
+
+For performance and load testing, prefer running the service with:
+
+```bash
+export PAYMENTS_PROVIDER=fake
+```
+
+This avoids using Stripe and allows you to stress-test the backend API, database access, idempotency behavior, and reconciliation flow locally.
+
+## Running local performance tests
+
+refer [k6/README.md](k6/README.md)

@@ -2,8 +2,10 @@ package fake
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/danindudesilva/payments-service/internal/payments/domain"
+	"github.com/google/uuid"
 )
 
 type Gateway struct{}
@@ -13,10 +15,12 @@ func New() *Gateway {
 }
 
 func (g *Gateway) CreatePayment(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
+	providerPaymentID := uuid.New().String()
+
 	return domain.CreateProviderPaymentResult{
 		ProviderName:      "fake",
-		ProviderPaymentID: "fake_payment_id",
-		ClientSecret:      "fake_client_secret",
+		ProviderPaymentID: providerPaymentID,
+		ClientSecret:      fmt.Sprintf("fake_secret_%s", providerPaymentID),
 		Status:            domain.PaymentStatusPending,
 	}, nil
 }

@@ -9,7 +9,7 @@ DB_SSLMODE=disable
 DATABASE_URL=postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)
 
 .PHONY: run test fmt build
-.PHONY: db-up db-down db-logs db-psql db-schema
+.PHONY: db-up db-down db-logs db-psql db-schema perf-baseline perf-idempotency perf-soak
 
 run:
 	go run ./cmd/api
@@ -37,3 +37,12 @@ db-psql:
 
 db-schema:
 	psql "$(DATABASE_URL)" -f db/schema.sql
+
+perf-baseline:
+	k6 run k6/baseline.js
+
+perf-idempotency:
+	k6 run k6/idempotency.js
+
+perf-soak:
+	k6 run k6/soak.js
