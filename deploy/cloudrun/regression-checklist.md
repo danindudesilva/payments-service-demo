@@ -25,6 +25,13 @@ Expected:
 - demo page renders
 - Stripe Elements loads when configured
 
+Verify in the demo page that:
+
+- a fresh page load pre-populates a new random `order_id`
+- amount defaults to a human-readable value such as `34.56`
+- creating a payment sends the correct minor-unit amount to the backend
+- resetting the demo generates a fresh default `order_id`
+
 ## 3. Create payment attempt
 
 Use Postman or curl to create a payment attempt.
