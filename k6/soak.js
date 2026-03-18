@@ -7,7 +7,7 @@ import {
   getAttempt,
   reconcileAttempt,
   parseJSON,
-} from "./helpers";
+} from "./helpers.js";
 
 const VUS = Number(__ENV.VUS || "10");
 const DURATION = __ENV.DURATION || "30m";
