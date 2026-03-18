@@ -1,7 +1,12 @@
 
 ## Running local performance tests
 
-Install `k6`, then run the service locally with the fake provider. Recommended local test configuration:
+Install `k6`:
+```bash
+brew install k6
+```
+
+then run the service locally with the fake provider. Recommended local test configuration:
 
 ```bash
 export APP_ENV=development
