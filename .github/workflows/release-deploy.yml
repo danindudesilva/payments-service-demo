@@ -9,12 +9,15 @@ permissions:
   id-token: write
 
 env:
-  PROJECT_ID: payments-service-staging
-  REGION: us-west1
-  SERVICE_NAME: payments-service-v1
-  ARTIFACT_REPO: payments-service-v1
-  IMAGE_NAME: payments-service
-  CLOUD_SQL_INSTANCE: payments-service-staging:us-west1:payments-service-db
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: ${{ vars.GCP_REGION }}
+  SERVICE_NAME: ${{ vars.GCP_CLOUD_RUN_SERVICE }}
+  ARTIFACT_REPO: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME || github.event.repository.name }}
+  CLOUD_SQL_INSTANCE: ${{ vars.GCP_CLOUD_SQL_INSTANCE }}
+  APP_ENV: ${{ vars.GCP_APP_ENV || 'staging' }}
+  APP_PORT: ${{ vars.GCP_APP_PORT || 3000 }}
+  PAYMENTS_PROVIDER: ${{ vars.PAYMENTS_PROVIDER || 'stripe' }}
 
 jobs:
   deploy:
@@ -66,7 +69,7 @@ jobs:
             --allow-unauthenticated
             --service-account=${{ secrets.GCP_RUNTIME_SERVICE_ACCOUNT }}
             --add-cloudsql-instances=${{ env.CLOUD_SQL_INSTANCE }}
-            --set-env-vars=APP_ENV=staging,PAYMENTS_PROVIDER=stripe,APP_VERSION=${{ steps.version.outputs.tag }}
+            --set-env-vars=APP_ENV=${{ env.APP_ENV }},PORT=${{ env.APP_PORT }},PAYMENTS_PROVIDER=${{ env.PAYMENTS_PROVIDER }},APP_VERSION=${{ steps.version.outputs.tag }}
             --set-secrets=DATABASE_URL=payments-service-database-url:latest,STRIPE_SECRET_KEY=payments-service-stripe-secret-key:latest,STRIPE_PUBLISHABLE_KEY=payments-service-stripe-publishable-key:latest,STRIPE_WEBHOOK_SECRET=payments-service-stripe-webhook-secret:latest
 
       - name: Show deployed URL
