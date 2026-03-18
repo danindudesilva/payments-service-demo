@@ -219,3 +219,30 @@ See:
 ```
 deploy/github-actions/README.md
 ```
+
+## Performance testing mode
+
+For performance and load testing, prefer running the service with:
+
+```bash
+export PAYMENTS_PROVIDER=fake
+```
+
+This avoids using Stripe and allows you to stress-test the backend API, database access, idempotency behavior, and reconciliation flow locally.
+
+Recommended local test configuration:
+```
+export APP_ENV=development
+export PORT=3000
+export DATABASE_URL="postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable"
+export PAYMENTS_PROVIDER=fake
+go run ./cmd/api
+```
+
+The fake provider should be used for:
+- baseline load tests
+- idempotency stress tests
+- soak tests
+- spike tests
+
+Use the real Stripe-backed deployment only for low-volume integration and regression testing.
