@@ -2,6 +2,8 @@ package fake
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/danindudesilva/payments-service/internal/payments/domain"
 )
@@ -13,10 +15,12 @@ func New() *Gateway {
 }
 
 func (g *Gateway) CreatePayment(ctx context.Context, request domain.CreateProviderPaymentRequest) (domain.CreateProviderPaymentResult, error) {
+	providerPaymentID := fmt.Sprintf("fake_pi_%d", time.Now().UnixNano())
+
 	return domain.CreateProviderPaymentResult{
 		ProviderName:      "fake",
-		ProviderPaymentID: "fake_payment_id",
-		ClientSecret:      "fake_client_secret",
+		ProviderPaymentID: providerPaymentID,
+		ClientSecret:      fmt.Sprintf("fake_secret_%s", providerPaymentID),
 		Status:            domain.PaymentStatusPending,
 	}, nil
 }
