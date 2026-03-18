@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/danindudesilva/payments-service/internal/payments/domain"
+	"github.com/danindudesilva/payments-service/internal/payments/service"
 )
 
 type ErrorResponse struct {
@@ -17,6 +18,14 @@ type mappedError struct {
 }
 
 func MapError(err error) mappedError {
+	var validationErr service.ValidationError
+	if errors.As(err, &validationErr) {
+		return mappedError{
+			StatusCode: http.StatusBadRequest,
+			Message:    validationErr.Error(),
+		}
+	}
+
 	switch {
 	case errors.Is(err, domain.ErrPaymentNotFound):
 		return mappedError{
