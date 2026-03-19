@@ -1,14 +1,6 @@
 name: ci
 
-on:
-  pull_request:
-  push:
-    branches:
-      - main
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+on: push
 
 env:
   TEST_DB_NAME: ${{ vars.TEST_DB_NAME }}
@@ -19,7 +11,8 @@ env:
   DATABASE_URL: postgres://${{ vars.TEST_DB_USER }}:${{ vars.TEST_DB_PASSWORD }}@localhost:${{ vars.TEST_DB_PORT || '5432' }}/${{ vars.TEST_DB_NAME }}?sslmode=disable
 
 jobs:
-  test:
+  ci:
+    name: CI
     runs-on: ubuntu-latest
     environment: GitHub Actions
     services:

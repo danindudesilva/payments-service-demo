@@ -1,4 +1,4 @@
-name: release-deploy
+name: Release
 
 on:
   pull_request:
@@ -19,6 +19,7 @@ env:
 
 jobs:
   deploy:
+    name: Release
     runs-on: ubuntu-latest
     environment: Google Cloud Platform
 
