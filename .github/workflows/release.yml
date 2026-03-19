@@ -1,4 +1,4 @@
-name: release-deploy
+name: Release
 
 on:
   release:
@@ -9,15 +9,18 @@ permissions:
   id-token: write
 
 env:
-  PROJECT_ID: payments-service-staging
-  REGION: us-west1
-  SERVICE_NAME: payments-service-v1
-  ARTIFACT_REPO: payments-service-v1
-  IMAGE_NAME: payments-service
-  CLOUD_SQL_INSTANCE: payments-service-staging:us-west1:payments-service-db
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: ${{ vars.GCP_REGION }}
+  SERVICE_NAME: ${{ vars.GCP_CLOUD_RUN_SERVICE }}
+  ARTIFACT_REPO: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME || github.event.repository.name }}
+  CLOUD_SQL_INSTANCE: ${{ vars.GCP_CLOUD_SQL_INSTANCE }}
+  APP_ENV: ${{ vars.GCP_APP_ENV || 'staging' }}
+  PAYMENTS_PROVIDER: ${{ vars.PAYMENTS_PROVIDER || 'stripe' }}
 
 jobs:
   deploy:
+    name: Release
     runs-on: ubuntu-latest
     environment: Google Cloud Platform
 
@@ -43,7 +46,7 @@ jobs:
 
       - name: Set image URI
         run: |
-          echo "IMAGE_URI=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}" >> "$GITHUB_ENV"
+          echo "IMAGE_URI=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.IMAGE_NAME }}:${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -66,8 +69,8 @@ jobs:
             --allow-unauthenticated
             --service-account=${{ secrets.GCP_RUNTIME_SERVICE_ACCOUNT }}
             --add-cloudsql-instances=${{ env.CLOUD_SQL_INSTANCE }}
-            --set-env-vars=APP_ENV=staging,PAYMENTS_PROVIDER=stripe,APP_VERSION=${{ steps.version.outputs.tag }}
-            --set-secrets=DATABASE_URL=payments-service-database-url:latest,STRIPE_SECRET_KEY=payments-service-stripe-secret-key:latest,STRIPE_PUBLISHABLE_KEY=payments-service-stripe-publishable-key:latest,STRIPE_WEBHOOK_SECRET=payments-service-stripe-webhook-secret:latest
+            --set-env-vars=APP_ENV=${{ env.APP_ENV }},PAYMENTS_PROVIDER=${{ env.PAYMENTS_PROVIDER }},APP_VERSION=${{ steps.version.outputs.tag }}
+            --set-secrets=DATABASE_URL=${{ vars.DATABASE_URL_SECRET_NAME }}:latest,STRIPE_SECRET_KEY=${{ vars.STRIPE_SECRET_KEY_SECRET_NAME }}:latest,STRIPE_PUBLISHABLE_KEY=${{ vars.STRIPE_PUBLISHABLE_KEY_SECRET_NAME }}:latest,STRIPE_WEBHOOK_SECRET=${{ vars.STRIPE_WEBHOOK_SECRET_SECRET_NAME }}:latest
 
       - name: Show deployed URL
         run: |

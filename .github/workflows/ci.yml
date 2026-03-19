@@ -1,36 +1,33 @@
-name: ci
+name: CI
 
-on:
-  pull_request:
-  push:
-    branches:
-      - main
+on: push
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+env:
+  TEST_DB_NAME: ${{ vars.TEST_DB_NAME }}
+  TEST_DB_USER: ${{ vars.TEST_DB_USER }}
+  TEST_DB_PASSWORD: ${{ vars.TEST_DB_PASSWORD }}
+  TEST_DB_PORT: ${{ vars.TEST_DB_PORT || '5432' }}
+  MIN_COVERAGE: ${{ vars.MIN_COVERAGE || '70' }}
+  DATABASE_URL: postgres://${{ vars.TEST_DB_USER }}:${{ vars.TEST_DB_PASSWORD }}@localhost:${{ vars.TEST_DB_PORT || '5432' }}/${{ vars.TEST_DB_NAME }}?sslmode=disable
 
 jobs:
-  test:
+  ci:
+    name: CI
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: payments_service
-          POSTGRES_USER: payments_service
-          POSTGRES_PASSWORD: payments_service
+          POSTGRES_DB: ${{ env.TEST_DB_NAME }}
+          POSTGRES_USER: ${{ env.TEST_DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.TEST_DB_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U payments_service -d payments_service"
+          --health-cmd="pg_isready -U ${TEST_DB_USER} -d ${TEST_DB_NAME}"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=10
-
-    env:
-      DATABASE_URL: postgres://payments_service:payments_service@localhost:5432/payments_service?sslmode=disable
 
     steps:
       - name: Checkout
@@ -39,12 +36,25 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23.2'
+          go-version: '1.24'
+
+      - name: Validate required workflow variables
+        run: |
+          test -n "${TEST_DB_NAME}" || (echo "Missing required variable: DB_NAME" && exit 1)
+          test -n "${TEST_DB_USER}" || (echo "Missing required variable: DB_USER" && exit 1)
+          test -n "${TEST_DB_PASSWORD}" || (echo "Missing required variable: DB_PASSWORD" && exit 1)
+          test -n "${TEST_DB_PORT}" || (echo "Missing required variable: DB_PORT" && exit 1)
+          test -n "${MIN_COVERAGE}" || (echo "Missing required variable: MIN_COVERAGE" && exit 1)
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
 
       - name: Wait for Postgres
         run: |
           for i in {1..30}; do
-            pg_isready -h localhost -p 5432 -U payments_service -d payments_service && exit 0
+            pg_isready -h localhost -p "${TEST_DB_PORT}" -U "${TEST_DB_USER}" -d "${TEST_DB_NAME}" && exit 0
             sleep 2
           done
           echo "Postgres did not become ready in time"
@@ -53,7 +63,7 @@ jobs:
       - name: Apply schema
         run: psql "$DATABASE_URL" -f db/schema.sql
         env:
-          PGPASSWORD: payments_service
+          PGPASSWORD: ${{ env.TEST_DB_PASSWORD }}
 
       - name: Test with coverage
         run: |
@@ -64,4 +74,4 @@ jobs:
         run: |
           total=$(go tool cover -func=coverage.out | awk '/total:/ {print substr($3, 1, length($3)-1)}')
           echo "Total coverage: $total%"
-          awk -v total="$total" 'BEGIN { if (total+0 < 70) exit 1 }'
+          awk -v total="$total" -v min="${MIN_COVERAGE}" 'BEGIN { if (total+0 < min+0) exit 1 }'
