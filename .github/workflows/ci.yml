@@ -14,7 +14,6 @@ jobs:
   ci:
     name: CI
     runs-on: ubuntu-latest
-    environment: GitHub Actions
     services:
       postgres:
         image: postgres:16
